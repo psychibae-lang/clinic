@@ -528,9 +528,19 @@
   <!-- 차트번호 (접수자) -->
   <div class="staff-area" id="cj-chart-area">
     <div class="staff-label">🔒 접수 담당자 입력란</div>
-    <div class="field-row" id="cj-chart-input-wrap">
-      <label class="field-label"><span class="field-num">0</span> 차트번호</label>
-      <input type="text" id="cj-chart" placeholder="차트번호 입력" inputmode="numeric">
+    <div id="cj-chart-input-wrap">
+      <div class="field-row" style="margin-bottom:10px">
+        <label class="field-label"><span class="field-num">0</span> 차트번호</label>
+        <input type="text" id="cj-chart" placeholder="차트번호 입력" inputmode="numeric">
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:0.82rem;font-weight:700;color:#8a6020;margin-bottom:8px">작성 방법 선택</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-mode active" id="cj-btn-mode-direct" onclick="selectModeCj('direct')">✏️ 직접 작성</button>
+          <button class="btn-mode" id="cj-btn-mode-link" onclick="selectModeCj('link')">🔗 링크 전송</button>
+          <button class="btn-mode" id="cj-btn-mode-qr" onclick="selectModeCj('qr')">📱 QR 코드</button>
+        </div>
+      </div>
       <button class="btn-proceed" onclick="proceedChart('cj')">확인 후 진행 ▶</button>
     </div>
     <div id="cj-chart-locked" style="display:none">
@@ -541,6 +551,17 @@
     </div>
   </div>
 
+  <!-- 초진 링크/QR 패널 -->
+  <div id="cj-link-panel" style="display:none;margin-bottom:20px">
+    <div style="background:#f0f6ff;border:1.5px solid #2a5a8c;border-radius:12px;padding:18px 20px">
+      <div style="font-size:0.85rem;font-weight:700;color:#1a3a5c;margin-bottom:10px" id="cj-link-panel-title">🔗 환자에게 링크를 공유하세요</div>
+      <div id="cj-link-box" style="font-size:0.8rem;background:white;border:1px solid #ddd;border-radius:8px;padding:10px 14px;word-break:break-all;color:#333;margin-bottom:10px"></div>
+      <div id="cj-qr-box" style="display:none;text-align:center;margin:14px 0"></div>
+      <button onclick="copyLinkCj()" style="padding:9px 18px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;font-family:'Noto Sans KR',sans-serif">📋 링크 복사</button>
+    </div>
+  </div>
+
+  <div id="cj-form-body" style="display:none">
   <!-- 1. 성함 -->
   <div class="field-row">
     <label class="field-label"><span class="field-num">1</span> 성함</label>
@@ -671,8 +692,7 @@
     <button class="btn btn-reset" onclick="resetForm('cj')">초기화</button>
     <button class="btn btn-submit" onclick="submitForm('cj')">📄 PDF 저장 + 시트 전송</button>
   </div>
-
-
+  </div><!-- /cj-form-body -->
 
 </div>
 </div>
@@ -945,18 +965,56 @@ function clearSig(id) {
 
 // ── Chart number lock ─────────────────────────
 function proceedChart(prefix) {
-  const val = document.getElementById(prefix + '-chart').value.trim();
-  if (!val) { showToast('차트번호를 입력해주세요.'); return; }
+  const chartVal = document.getElementById(prefix + '-chart').value.trim();
+  if (!chartVal) { showToast('차트번호를 입력해주세요.'); return; }
+
+  // 작성 모드 확인
+  const mode = prefix === 'cj' ? currentModeCj : currentMode;
+
+  if (mode === 'link' || mode === 'qr') {
+    // 링크/QR 모드: 패널 표시, 폼 숨김
+    const url = window.location.href.split('?')[0] + '?tab=' + prefix + '&chart=' + encodeURIComponent(chartVal);
+    const linkBox = document.getElementById(prefix + '-link-box');
+    const panel = document.getElementById(prefix + '-link-panel');
+    const qrBox = document.getElementById(prefix + '-qr-box');
+    const title = document.getElementById(prefix + '-link-panel-title');
+    const formBody = document.getElementById(prefix + '-form-body');
+
+    if (linkBox) linkBox.textContent = url;
+    if (panel) panel.style.display = 'block';
+    if (formBody) formBody.style.display = 'none';  // 폼 숨김
+
+    if (mode === 'qr') {
+      if (title) title.textContent = '📱 QR 코드를 스캔하세요';
+      if (qrBox) {
+        qrBox.style.display = 'block';
+        qrBox.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url) + '" style="border-radius:8px;border:1px solid #ddd">';
+      }
+    } else {
+      if (title) title.textContent = '🔗 환자에게 링크를 공유하세요';
+      if (qrBox) qrBox.style.display = 'none';
+    }
+    showToast('링크를 환자에게 공유하세요.');
+  } else {
+    // 직접 작성 모드: 폼 표시
+    const formBody = document.getElementById(prefix + '-form-body');
+    if (formBody) formBody.style.display = 'block';
+    const panel = document.getElementById(prefix + '-link-panel');
+    if (panel) panel.style.display = 'none';
+    showToast('차트번호 확인. 이후 항목을 작성해주세요.');
+  }
+
   document.getElementById(prefix + '-chart-input-wrap').style.display = 'none';
-  const locked = document.getElementById(prefix + '-chart-locked');
-  locked.style.display = 'block';
-  document.getElementById(prefix + '-chart-display').textContent = '차트번호: ' + val + ' ✅';
-  showToast('차트번호 입력 완료. 이후 항목을 진행하세요.');
+  document.getElementById(prefix + '-chart-locked').style.display = 'block';
+  document.getElementById(prefix + '-chart-display').textContent = '차트번호: ' + chartVal + ' ✅';
 }
 
 function editChart(prefix) {
   document.getElementById(prefix + '-chart-input-wrap').style.display = 'block';
   document.getElementById(prefix + '-chart-locked').style.display = 'none';
+  // 폼 다시 표시
+  const formBody = document.getElementById(prefix + '-form-body');
+  if (formBody) formBody.style.display = 'block';
 }
 
 // ── Toggle agree ──────────────────────────────
@@ -1030,14 +1088,29 @@ function generatePDF(type, data, sigDataUrl) {
         <tr><td>전화번호</td><td>${data.phone}</td></tr>
         <tr><td>주소</td><td>${data.addr}</td></tr>
       </table>
-      <h3 style="margin-top:24px;color:#1a3a5c">동의 항목</h3>
-      <ul>
-        <li>개인정보 수집·이용 동의: ${data.agree1?'✔ 동의':'✘ 미동의'}</li>
-        <li>진단서 발급 안내 동의: ${data.agree2?'✔ 동의':'✘ 미동의'}</li>
-        <li>본인확인 불가 진료 불가 동의: ${data.agree3?'✔ 동의':'✘ 미동의'}</li>
-        <li>발급 서류 환불 불가 동의: ${data.agree4?'✔ 동의':'✘ 미동의'}</li>
-        <li>상담료·검사비 발생 동의: ${data.agree5?'✔ 동의':'✘ 미동의'}</li>
-      </ul>`;
+      <h3 style="margin-top:24px;color:#1a3a5c;border-top:1px solid #ddd;padding-top:16px">동의 항목</h3>
+      <table style="margin-top:10px">
+        <tr>
+          <td style="background:#f5f3ef;font-weight:600;color:#1a3a5c;width:36%;font-size:13px">6. 개인정보 수집·이용 동의</td>
+          <td style="font-size:13px;line-height:1.7">귀하의 소중한 개인정보는 의료법 및 개인정보보호법의 관련규정에 의하여 진료 및 진료 지원의 목적으로 수집 및 이용됩니다. "개인정보보호법"에 의거 이와 같이 개인정보 수집 및 이용에 동의합니까?<br><strong style="color:${data.agree1?'#27ae60':'#c0392b'}">${data.agree1?'✔ 예 (동의)':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td style="background:#f5f3ef;font-weight:600;color:#1a3a5c;font-size:13px">7. 진단서 발급 관련 동의</td>
+          <td style="font-size:13px;line-height:1.7">진단서 관련하여 금일 진료 후 발급 불가하며, 진단서는 최소 1~2개월 정도의 충분한 외래 진료 후 발급 가능함을 알려 드리며 이에 대해 동의하시나요?<br><strong style="color:${data.agree2?'#27ae60':'#c0392b'}">${data.agree2?'✔ 예 (동의)':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td style="background:#f5f3ef;font-weight:600;color:#1a3a5c;font-size:13px">8. 본인 확인 관련 동의</td>
+          <td style="font-size:13px;line-height:1.7">본인 확인을 위하여 주민등록증, 자동차 운전면허증 등으로 본인 확인이 되지 않을 경우 진료가 불가함에 대하여 동의하시나요?<br><strong style="color:${data.agree3?'#27ae60':'#c0392b'}">${data.agree3?'✔ 예 (동의)':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td style="background:#f5f3ef;font-weight:600;color:#1a3a5c;font-size:13px">9. 발급 서류 환불 불가 동의</td>
+          <td style="font-size:13px;line-height:1.7">발급된 서류는 환불이 되지 않음을 알려드리며 이에 동의하시나요?<br><strong style="color:${data.agree4?'#27ae60':'#c0392b'}">${data.agree4?'✔ 예 (동의)':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td style="background:#f5f3ef;font-weight:600;color:#1a3a5c;font-size:13px">10. 상담료·검사비 발생 동의</td>
+          <td style="font-size:13px;line-height:1.7">약 처방이 없더라도 상담료 및 검사비 등이 있어 비용이 발생됨을 이해하고 동의하시나요?<br><strong style="color:${data.agree5?'#27ae60':'#c0392b'}">${data.agree5?'✔ 예 (동의)':'✘ 미동의'}</strong></td>
+        </tr>
+      </table>`;
   } else {
     content = `
       <h2 style="text-align:center;color:#1a3a5c;font-family:'Noto Serif KR',serif;margin-bottom:4px">대리 처방 동의서</h2>
@@ -1151,44 +1224,31 @@ async function submitForm(prefix) {
 
 // ── 작성 모드 선택 ────────────────────────────
 let currentMode = 'direct';
+let currentModeCj = 'direct';
+
+function selectModeCj(mode) {
+  currentModeCj = mode;
+  ['direct','link','qr'].forEach(m => {
+    const btn = document.getElementById('cj-btn-mode-' + m);
+    if (btn) btn.classList.toggle('active', m === mode);
+  });
+}
 
 function selectMode(mode) {
   currentMode = mode;
-  document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
-  document.getElementById('btn-mode-' + mode).classList.add('active');
-  const panel = document.getElementById('dr-link-panel');
-  const body = document.getElementById('dr-form-body');
-  const qrBox = document.getElementById('dr-qr-box');
-  const linkBox = document.getElementById('dr-link-box');
-  const title = document.getElementById('dr-link-panel-title');
-
-  if (mode === 'direct') {
-    panel.style.display = 'none';
-    body.style.display = 'block';
-  } else {
-    const chartVal = document.getElementById('dr-chart').value.trim();
-    if (!chartVal) { showToast('차트번호를 먼저 입력해주세요.'); return; }
-    const url = window.location.href.split('?')[0] + '?tab=daeri&chart=' + encodeURIComponent(chartVal);
-    linkBox.textContent = url;
-    panel.style.display = 'block';
-    body.style.display = 'block';
-    if (mode === 'qr') {
-      title.textContent = '📱 QR 코드를 스캔하세요';
-      qrBox.style.display = 'block';
-      qrBox.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url);
-      img.style.cssText = 'border-radius:8px;border:1px solid #ddd';
-      qrBox.appendChild(img);
-    } else {
-      title.textContent = '🔗 환자에게 링크를 공유하세요';
-      qrBox.style.display = 'none';
-    }
-  }
+  ['direct','link','qr'].forEach(m => {
+    const btn = document.getElementById('btn-mode-' + m);
+    if (btn) btn.classList.toggle('active', m === mode);
+  });
 }
 
 function copyLink() {
   const text = document.getElementById('dr-link-box').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('✅ 링크 복사 완료!'));
+}
+
+function copyLinkCj() {
+  const text = document.getElementById('cj-link-box').textContent;
   navigator.clipboard.writeText(text).then(() => showToast('✅ 링크 복사 완료!'));
 }
 
@@ -1231,7 +1291,7 @@ function buildDaeriPdfHtml(data, sigDataUrl) {
   table { width:100%; border-collapse:collapse; margin-bottom:0; }
   td { padding:9px 12px; border:1px solid #555; vertical-align:middle; line-height:1.5; }
   .th { background:#f0f0f0; font-weight:700; text-align:center; width:90px; }
-  .th-big { background:#f0f0f0; font-weight:700; text-align:center; writing-mode:vertical-rl; width:40px; letter-spacing:0.2em; }
+  .th-big { background:#f0f0f0; font-weight:700; text-align:center; writing-mode:vertical-lr; width:44px; letter-spacing:0.25em; font-size:13px; vertical-align:middle; }
   .hl { background:#ffff00; font-weight:700; }
   .reason-box { background:#ffff00; font-weight:700; padding:14px 16px; line-height:1.7; }
   .law-text { margin:18px 0; font-size:13px; line-height:1.9; font-weight:700; }
@@ -1251,7 +1311,7 @@ function buildDaeriPdfHtml(data, sigDataUrl) {
 
 <table>
   <tr>
-    <td class="th-big" rowspan="3">대리<br>수령자</td>
+    <td class="th-big" rowspan="3">대리수령자</td>
     <td class="th">성&nbsp;&nbsp;&nbsp;&nbsp;명</td>
     <td class="hl">${data.visitorName}</td>
     <td class="th">연&nbsp;&nbsp;락&nbsp;&nbsp;처</td>
@@ -1268,7 +1328,7 @@ function buildDaeriPdfHtml(data, sigDataUrl) {
     <td class="hl" colspan="3">${data.visitorAddr}</td>
   </tr>
   <tr>
-    <td class="th-big" rowspan="3">환&nbsp;&nbsp;&nbsp;자</td>
+    <td class="th-big" rowspan="3">환자</td>
     <td class="th">성&nbsp;&nbsp;&nbsp;&nbsp;명</td>
     <td class="hl">${data.patientName}</td>
     <td class="th">연&nbsp;&nbsp;락&nbsp;&nbsp;처</td>
@@ -1283,7 +1343,7 @@ function buildDaeriPdfHtml(data, sigDataUrl) {
     <td class="hl" colspan="3">${data.patientAddr}</td>
   </tr>
   <tr>
-    <td class="th-big">대리<br>수령<br>사유</td>
+    <td class="th-big">대리수령사유</td>
     <td colspan="4" class="reason-box">${data.reason}</td>
   </tr>
 </table>
