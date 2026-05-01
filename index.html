@@ -833,7 +833,7 @@
 <script>
 // ── 구글 시트 설정 ──────────────────────────────
 // Apps Script 배포 후 아래 URL을 교체하세요
-const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyuYrU938U9ibu6Ix4equ3ZNeAognnYY2NQg2dyp-AyYHTpJN7gogi3BWmzTVGr18E/exec";
+const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzFR4dqmK32DDSHf8s6D0IJzmOFJYakSyBFOCx5MXrcb-zA5XMs9Dk3cBKNkzBCzOc/exec";
 const SHEET_ID = "1y11owv0wFpSYIGSVRiq05vk93izjofjv5hQ1cAnKvU0";
 
 // ── 탭 전환 ────────────────────────────────────
@@ -1060,17 +1060,13 @@ ${content}
 }
 
 // ── Send to Google Sheets ──────────────────────
-async function sendToSheet(sheetName, rowData) {
-  if (SHEET_WEB_APP_URL === "여기에_Apps_Script_배포_URL_입력") {
-    console.log('Sheet URL not configured. Data:', rowData);
-    return false;
-  }
+async function sendToSheet(sheetName, rowData, sigDataUrl) {
   try {
     await fetch(SHEET_WEB_APP_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sheet: sheetName, row: rowData })
+      body: JSON.stringify({ sheet: sheetName, row: rowData, signature: sigDataUrl })
     });
     return true;
   } catch(e) {
@@ -1109,8 +1105,8 @@ async function submitForm(prefix) {
 
     const rowData = [fullDateStr(), chart, n, i1, '(보호)', ph, ad,
       a1?'동의':'미동의', a2?'동의':'미동의', a3?'동의':'미동의',
-      a4?'동의':'미동의', a5?'동의':'미동의', '(서명이미지-PDF참조)', filename];
-    const sent = await sendToSheet('초진', rowData);
+      a4?'동의':'미동의', a5?'동의':'미동의', '(드라이브링크)', filename];
+    const sent = await sendToSheet('초진', rowData, sigDataUrl);
     showToast(sent ? '✅ PDF 저장 + 시트 전송 완료!' : '📄 PDF 저장 완료 (시트 URL 미설정)');
 
   } else {
@@ -1139,8 +1135,8 @@ async function submitForm(prefix) {
 
     generatePDF('dr', data, sigDataUrl);
 
-    const rowData = [fullDateStr(), chart, vn, vp, vb, va, rel, pn, pp, pb, pa, rsn, '(서명이미지-PDF참조)', filename];
-    const sent = await sendToSheet('대리', rowData);
+    const rowData = [fullDateStr(), chart, vn, vp, vb, va, rel, pn, pp, pb, pa, rsn, '(드라이브링크)', filename];
+    const sent = await sendToSheet('대리', rowData, sigDataUrl);
     showToast(sent ? '✅ PDF 저장 + 시트 전송 완료!' : '📄 PDF 저장 완료 (시트 URL 미설정)');
   }
 }
@@ -1172,38 +1168,59 @@ function resetForm(prefix) {
 }
 
 // ── GAS code snippet ──────────────────────────
-document.getElementById('gas-code-display').textContent = `// Google Apps Script 코드
-// 구글 시트 → 확장 프로그램 → Apps Script 에 붙여넣기
+document.getElementById('gas-code-display').textContent = `// ✅ Google Apps Script 코드 (드라이브 저장 버전)
+// 구글 시트 → 확장 프로그램 → Apps Script → 기존 코드 전체 교체 후 저장 & 재배포
+
+// ★ 서명 이미지를 저장할 구글 드라이브 폴더 ID를 여기에 입력하세요
+//   드라이브에서 폴더 열기 → 주소창 끝부분 ID 복사
+const DRIVE_FOLDER_ID = "1dADal0EKuuPpVwkim6LFwGSIPfnAOSRQ";
 
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.openById(
-      "${SHEET_ID}"
-    );
+    const ss = SpreadsheetApp.openById("${SHEET_ID}");
     let sheet = ss.getSheetByName(data.sheet);
     if (!sheet) sheet = ss.insertSheet(data.sheet);
 
-    // 헤더 (첫 실행 시 자동 생성)
+    // 서명 이미지 → 드라이브 저장
+    let driveLink = "";
+    if (data.signature) {
+      const base64 = data.signature.replace(/^data:image\/png;base64,/, "");
+      const blob = Utilities.newBlob(
+        Utilities.base64Decode(base64), "image/png",
+        data.row[data.row.length - 1] + "_서명.png"
+      );
+      const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      driveLink = file.getUrl();
+    }
+
+    // 시트에 드라이브 링크 삽입 (서명 컬럼 = 뒤에서 2번째)
+    const row = data.row;
+    row[row.length - 2] = driveLink;
+
+    // 헤더 자동 생성 (첫 실행 시)
     if (sheet.getLastRow() === 0) {
-      if (data.sheet === '초진') {
-        sheet.appendRow(['작성일시','차트번호','성명','주민앞6',
-          '주민뒤7','전화번호','주소','개인정보동의','진단서동의',
-          '본인확인동의','서류환불동의','비용동의','서명','파일명']);
+      if (data.sheet === "초진") {
+        sheet.appendRow(["작성일시","차트번호","성명","주민앞6",
+          "주민뒤7","전화번호","주소","개인정보동의","진단서동의",
+          "본인확인동의","서류환불동의","비용동의","서명링크","파일명"]);
       } else {
-        sheet.appendRow(['작성일시','차트번호','방문자성명','방문자연락처',
-          '방문자생년월일','방문자주소','관계','환자성명','환자연락처',
-          '환자생년월일','환자주소','대리수령사유','서명','파일명']);
+        sheet.appendRow(["작성일시","차트번호","방문자성명","방문자연락처",
+          "방문자생년월일","방문자주소","관계","환자성명","환자연락처",
+          "환자생년월일","환자주소","대리수령사유","서명링크","파일명"]);
       }
     }
-    sheet.appendRow(data.row);
-    return ContentService.createTextOutput(
-      JSON.stringify({result:'success'})
-    ).setMimeType(ContentService.MimeType.JSON);
+    sheet.appendRow(row);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({result:"success", link: driveLink}))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
-    return ContentService.createTextOutput(
-      JSON.stringify({result:'error', message: err.toString()})
-    ).setMimeType(ContentService.MimeType.JSON);
+    return ContentService
+      .createTextOutput(JSON.stringify({result:"error", message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }`;
 
