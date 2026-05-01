@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>원무 접수 시스템</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&display=swap');
+
+  :root {
+    --primary: #1a3a5c;
+    --primary-light: #2a5a8c;
+    --accent: #c8a96e;
+    --bg: #f5f3ef;
+    --card: #ffffff;
+    --border: #d8d0c4;
+    --text: #1e1e1e;
+    --muted: #888;
+    --danger: #c0392b;
+    --success: #27ae60;
+    --shadow: 0 2px 16px rgba(26,58,92,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    color: var(--text);
+  }
+
+  /* ── Header ── */
+  .app-header {
+    background: var(--primary);
+    color: white;
+    padding: 18px 24px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+
+  .app-title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .app-title span { font-size: 1.4rem; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.7);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+
+  .tab.active {
+    background: var(--bg);
+    color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* ── Form container ── */
+  .form-page { display: none; }
+  .form-page.active { display: block; }
+
+  .form-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* ── Section title ── */
+  .section-badge {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+
+  /* ── Staff chart number area ── */
+  .staff-area {
+    background: #fff8e8;
+    border: 2px dashed var(--accent);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+  }
+
+  .staff-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #a07830;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  .staff-area .field-row { margin-bottom: 0; }
+
+  /* ── Field ── */
+  .field-row {
+    margin-bottom: 20px;
+  }
+
+  .field-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .field-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  input[type="text"],
+  input[type="tel"],
+  input[type="number"],
+  textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 1.05rem;
+    background: white;
+    color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(42,90,140,0.12);
+  }
+
+  input.error { border-color: var(--danger); }
+
+  .field-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* ── Radio / Checkbox ── */
+  .radio-group, .check-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .radio-item, .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s;
+    background: white;
+  }
+
+  .radio-item:hover, .check-item:hover {
+    border-color: var(--primary-light);
+    background: #f0f6ff;
+  }
+
+  .radio-item.selected, .check-item.checked {
+    border-color: var(--primary);
+    background: #eef4fb;
+  }
+
+  .radio-item input[type="radio"],
+  .check-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    margin-top: 1px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .radio-text, .check-text {
+    font-size: 0.93rem;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  /* ── Big checkbox (동의) ── */
+  .agree-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 20px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    background: white;
+    transition: all 0.18s;
+    margin-bottom: 14px;
+  }
+
+  .agree-item.checked {
+    border-color: var(--success);
+    background: #f0fff6;
+  }
+
+  .agree-item input[type="checkbox"] {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    accent-color: var(--success);
+    cursor: pointer;
+    padding: 0;
+    margin-top: 2px;
+  }
+
+  .agree-text {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--text);
+  }
+
+  .agree-yes {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--success);
+    margin-top: 6px;
+  }
+
+  /* ── Divider / Sub-section ── */
+  .sub-section {
+    background: #f0f4f9;
+    border-left: 4px solid var(--primary-light);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 18px;
+    margin: 10px 0 20px;
+  }
+
+  .sub-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 14px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Signature canvas ── */
+  .sig-area {
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+    position: relative;
+  }
+
+  .sig-canvas {
+    display: block;
+    width: 100%;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  .sig-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: #f5f3ef;
+    border-top: 1px solid var(--border);
+  }
+
+  .sig-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .btn-clear-sig {
+    padding: 6px 14px;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--text);
+  }
+
+  /* ── Buttons ── */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.04em;
+  }
+
+  .btn-reset {
+    background: white;
+    color: var(--muted);
+    border: 1.5px solid var(--border);
+    flex: 0 0 auto;
+    padding: 16px 22px;
+  }
+
+  .btn-submit {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 14px rgba(26,58,92,0.25);
+  }
+
+  .btn-submit:active { transform: scale(0.98); }
+
+  .btn-proceed {
+    padding: 11px 20px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+
+  /* ── ID number row ── */
+  .id-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .id-row input { flex: 1; }
+  .id-sep { font-size: 1.4rem; color: var(--muted); font-weight: 300; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--primary);
+    color: white;
+    padding: 14px 28px;
+    border-radius: 30px;
+    font-size: 0.93rem;
+    font-weight: 500;
+    z-index: 999;
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    white-space: nowrap;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── Validation error ── */
+  .err-msg {
+    font-size: 0.78rem;
+    color: var(--danger);
+    margin-top: 5px;
+    display: none;
+  }
+
+  .err-msg.show { display: block; }
+
+  /* ── Chart locked state ── */
+  .chart-locked {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #e8f4ea;
+    border-radius: 8px;
+    border: 1.5px solid #27ae60;
+    margin-top: 10px;
+  }
+
+  .chart-locked-text {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e7e34;
+  }
+
+  .btn-edit-chart {
+    margin-left: auto;
+    padding: 4px 12px;
+    background: white;
+    border: 1px solid #27ae60;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: #1e7e34;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+
+  /* ── GAS info panel ── */
+  .gas-info {
+    background: #fffbf0;
+    border: 1.5px solid var(--accent);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 36px;
+  }
+
+  .gas-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #8a6020;
+    margin-bottom: 10px;
+  }
+
+  .gas-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    background: #1e1e1e;
+    color: #7ec8e3;
+    padding: 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+
+  /* ── Print / PDF only ── */
+  @media print {
+    .app-header, .tabs, .btn-row, .btn-proceed, .staff-area .btn-proceed,
+    .gas-info, .sig-toolbar, .tab { display: none !important; }
+    body { background: white; }
+    .form-page { display: block !important; }
+    .form-wrap { padding: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-title"><span>🏥</span> 원무 접수 시스템</div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('chojin')">초진 접수</button>
+    <button class="tab" onclick="switchTab('daeri')">대리 처방</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     초진 접수
+══════════════════════════════════════════ -->
+<div id="page-chojin" class="form-page active">
+<div class="form-wrap">
+
+  <div class="section-badge">초진 접수 양식</div>
+
+  <!-- 차트번호 (접수자) -->
+  <div class="staff-area" id="cj-chart-area">
+    <div class="staff-label">🔒 접수 담당자 입력란</div>
+    <div class="field-row" id="cj-chart-input-wrap">
+      <label class="field-label"><span class="field-num">0</span> 차트번호</label>
+      <input type="text" id="cj-chart" placeholder="차트번호 입력" inputmode="numeric">
+      <button class="btn-proceed" onclick="proceedChart('cj')">확인 후 진행 ▶</button>
+    </div>
+    <div id="cj-chart-locked" style="display:none">
+      <div class="chart-locked">
+        <span class="chart-locked-text" id="cj-chart-display"></span>
+        <button class="btn-edit-chart" onclick="editChart('cj')">수정</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. 성함 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">1</span> 성함</label>
+    <input type="text" id="cj-name" placeholder="홍길동">
+    <div class="err-msg" id="cj-name-err">성함을 입력해주세요.</div>
+  </div>
+
+  <!-- 2. 주민번호 앞 6자리 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">2</span> 주민번호 앞 6자리</label>
+    <input type="text" id="cj-id1" placeholder="810101" maxlength="6" inputmode="numeric">
+    <div class="err-msg" id="cj-id1-err">6자리를 입력해주세요.</div>
+  </div>
+
+  <!-- 3. 주민번호 뒤 7자리 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">3</span> 주민번호 뒤 7자리</label>
+    <input type="password" id="cj-id2" placeholder="●●●●●●●" maxlength="7" inputmode="numeric">
+    <div class="field-hint">입력 후 자동으로 가려집니다.</div>
+    <div class="err-msg" id="cj-id2-err">7자리를 입력해주세요.</div>
+  </div>
+
+  <!-- 4. 전화번호 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">4</span> 전화번호 <span style="font-size:0.78rem;color:var(--muted);font-weight:400">(숫자만)</span></label>
+    <input type="tel" id="cj-phone" placeholder="01012345678" inputmode="numeric">
+    <div class="err-msg" id="cj-phone-err">전화번호를 입력해주세요.</div>
+  </div>
+
+  <!-- 5. 주소 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">5</span> 주소</label>
+    <input type="text" id="cj-addr" placeholder="예) 서울시 강남구 역삼동">
+    <div class="field-hint">최소 도/시/동(읍·면)까지 기재해주세요.</div>
+    <div class="err-msg" id="cj-addr-err">주소를 입력해주세요.</div>
+  </div>
+
+  <!-- 6~10. 동의 항목 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">6</span> 개인정보 수집·이용 동의</label>
+    <div class="agree-text" style="margin-bottom:10px;font-size:0.88rem;color:#555;line-height:1.6">
+      귀하의 소중한 개인정보는 의료법 및 개인정보보호법의 관련규정에 의하여 진료 및 진료 지원의 목적으로 수집 및 이용됩니다. 개인정보 수집 및 이용에 동의하십니까?
+    </div>
+    <label class="agree-item" id="cj-agree1-label" onclick="toggleAgree('cj-agree1')">
+      <input type="checkbox" id="cj-agree1" onclick="event.stopPropagation()">
+      <div>
+        <div class="agree-text">위 내용에 동의합니다.</div>
+        <div class="agree-yes">✔ 예</div>
+      </div>
+    </label>
+    <div class="err-msg" id="cj-agree1-err">동의가 필요합니다.</div>
+  </div>
+
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">7</span> 진단서 발급 관련 안내 동의</label>
+    <div class="agree-text" style="margin-bottom:10px;font-size:0.88rem;color:#555;line-height:1.6">
+      금일 진료 후 진단서 발급은 불가하며, 최소 1~2개월의 외래 진료 후 발급 가능함을 확인하고 동의하십니까?
+    </div>
+    <label class="agree-item" id="cj-agree2-label" onclick="toggleAgree('cj-agree2')">
+      <input type="checkbox" id="cj-agree2" onclick="event.stopPropagation()">
+      <div>
+        <div class="agree-text">위 내용에 동의합니다.</div>
+        <div class="agree-yes">✔ 예</div>
+      </div>
+    </label>
+    <div class="err-msg" id="cj-agree2-err">동의가 필요합니다.</div>
+  </div>
+
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">8</span> 본인 확인 불가 시 진료 불가 동의</label>
+    <div class="agree-text" style="margin-bottom:10px;font-size:0.88rem;color:#555;line-height:1.6">
+      주민등록증, 자동차 운전면허증 등으로 본인 확인이 되지 않을 경우 진료가 불가함에 동의하십니까?
+    </div>
+    <label class="agree-item" id="cj-agree3-label" onclick="toggleAgree('cj-agree3')">
+      <input type="checkbox" id="cj-agree3" onclick="event.stopPropagation()">
+      <div>
+        <div class="agree-text">위 내용에 동의합니다.</div>
+        <div class="agree-yes">✔ 예</div>
+      </div>
+    </label>
+    <div class="err-msg" id="cj-agree3-err">동의가 필요합니다.</div>
+  </div>
+
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">9</span> 발급 서류 환불 불가 동의</label>
+    <div class="agree-text" style="margin-bottom:10px;font-size:0.88rem;color:#555;line-height:1.6">
+      발급된 서류는 환불이 되지 않음을 이해하고 동의하십니까?
+    </div>
+    <label class="agree-item" id="cj-agree4-label" onclick="toggleAgree('cj-agree4')">
+      <input type="checkbox" id="cj-agree4" onclick="event.stopPropagation()">
+      <div>
+        <div class="agree-text">위 내용에 동의합니다.</div>
+        <div class="agree-yes">✔ 예</div>
+      </div>
+    </label>
+    <div class="err-msg" id="cj-agree4-err">동의가 필요합니다.</div>
+  </div>
+
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">10</span> 상담료 및 검사비 발생 동의</label>
+    <div class="agree-text" style="margin-bottom:10px;font-size:0.88rem;color:#555;line-height:1.6">
+      약 처방이 없더라도 상담료 및 검사비 등이 있어 비용이 발생됨을 이해하고 동의하십니까?
+    </div>
+    <label class="agree-item" id="cj-agree5-label" onclick="toggleAgree('cj-agree5')">
+      <input type="checkbox" id="cj-agree5" onclick="event.stopPropagation()">
+      <div>
+        <div class="agree-text">위 내용에 동의합니다.</div>
+        <div class="agree-yes">✔ 예</div>
+      </div>
+    </label>
+    <div class="err-msg" id="cj-agree5-err">동의가 필요합니다.</div>
+  </div>
+
+  <!-- 11. 서명 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">11</span> 이름 서명 (정자로 써주세요)</label>
+    <div class="sig-area">
+      <canvas id="cj-sig-canvas" class="sig-canvas" height="160"></canvas>
+      <div class="sig-toolbar">
+        <span class="sig-hint">손가락이나 펜으로 이름을 써주세요</span>
+        <button class="btn-clear-sig" onclick="clearSig('cj-sig-canvas')">지우기</button>
+      </div>
+    </div>
+    <div class="err-msg" id="cj-sig-err">서명을 해주세요.</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-reset" onclick="resetForm('cj')">초기화</button>
+    <button class="btn btn-submit" onclick="submitForm('cj')">📄 PDF 저장 + 시트 전송</button>
+  </div>
+
+  <!-- GAS 설정 안내 -->
+  <div class="gas-info" id="gas-guide">
+    <div class="gas-title">⚙️ 구글 시트 자동 전송 설정 (최초 1회)</div>
+    <p style="font-size:0.82rem;color:#666;margin-bottom:8px;line-height:1.6">
+      아래 Apps Script 코드를 복사하여 <strong>구글 시트 → 확장 프로그램 → Apps Script</strong> 에 붙여넣고 저장 후 배포하세요.
+      배포 URL을 아래 <code style="background:#eee;padding:1px 5px;border-radius:4px">SHEET_URL</code>에 붙여넣으면 자동 저장됩니다.
+    </p>
+    <div class="gas-code" id="gas-code-display"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     대리 처방
+══════════════════════════════════════════ -->
+<div id="page-daeri" class="form-page">
+<div class="form-wrap">
+
+  <div class="section-badge">대리 처방 동의서</div>
+
+  <!-- 차트번호 (접수자) -->
+  <div class="staff-area">
+    <div class="staff-label">🔒 접수 담당자 입력란</div>
+    <div id="dr-chart-input-wrap">
+      <div class="field-row">
+        <label class="field-label"><span class="field-num">0</span> 차트번호</label>
+        <input type="text" id="dr-chart" placeholder="차트번호 입력" inputmode="numeric">
+      </div>
+      <button class="btn-proceed" onclick="proceedChart('dr')">확인 후 진행 ▶</button>
+    </div>
+    <div id="dr-chart-locked" style="display:none">
+      <div class="chart-locked">
+        <span class="chart-locked-text" id="dr-chart-display"></span>
+        <button class="btn-edit-chart" onclick="editChart('dr')">수정</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 방문자 섹션 -->
+  <div class="sub-section">
+    <div class="sub-section-title">👤 방문자 정보</div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">1</span> 방문자 성명</label>
+      <input type="text" id="dr-visitor-name" placeholder="홍길동">
+      <div class="err-msg" id="dr-visitor-name-err">성명을 입력해주세요.</div>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">2</span> 방문자 연락처</label>
+      <input type="tel" id="dr-visitor-phone" placeholder="01012345678" inputmode="numeric">
+      <div class="err-msg" id="dr-visitor-phone-err">연락처를 입력해주세요.</div>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">3</span> 방문자 생년월일</label>
+      <input type="text" id="dr-visitor-birth" placeholder="19811231" maxlength="8" inputmode="numeric">
+      <div class="field-hint">예: 19811231</div>
+      <div class="err-msg" id="dr-visitor-birth-err">생년월일을 입력해주세요.</div>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">5</span> 방문자 주소</label>
+      <input type="text" id="dr-visitor-addr" placeholder="예) 서울시 강남구 역삼동">
+      <div class="err-msg" id="dr-visitor-addr-err">주소를 입력해주세요.</div>
+    </div>
+  </div>
+
+  <!-- 관계 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">4</span> 환자와의 관계</label>
+    <div class="radio-group" id="dr-relation-group">
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="1.직계존속">
+        <span class="radio-text">① 직계존속 (어머니, 아버지, 외·친 조부모)</span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="2.직계비속">
+        <span class="radio-text">② 직계비속 (아들, 딸, 손자, 손녀, 증손자·녀)</span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="3.배우자">
+        <span class="radio-text">③ 배우자 (남편, 아내)</span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="4.직계비속의배우자">
+        <span class="radio-text">④ 직계비속의 배우자 (아들·딸·손자·녀 등의 배우자)</span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="5.배우자직계존속">
+        <span class="radio-text">⑤ 배우자의 직계존속 (장인·장모·시부모)</span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="6.형제자매">
+        <span class="radio-text">⑥ 형제자매</span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="7.노인복지시설종사자">
+        <span class="radio-text">⑦ 노인의료복지시설 종사자 <span style="color:var(--danger);font-size:0.8rem">(재직증명서 필요)</span></span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-relation')">
+        <input type="radio" name="dr-relation" value="8.장애인거주시설종사자">
+        <span class="radio-text">⑧ 장애인 거주시설 종사자 <span style="color:var(--danger);font-size:0.8rem">(재직증명서 필요)</span></span>
+      </label>
+    </div>
+    <div class="err-msg" id="dr-relation-err">관계를 선택해주세요.</div>
+  </div>
+
+  <!-- 환자 섹션 -->
+  <div class="sub-section">
+    <div class="sub-section-title">🏥 환자 정보</div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">6</span> 환자 성명</label>
+      <input type="text" id="dr-patient-name" placeholder="홍삼순">
+      <div class="err-msg" id="dr-patient-name-err">환자 성명을 입력해주세요.</div>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">7</span> 환자 연락처</label>
+      <input type="tel" id="dr-patient-phone" placeholder="01087654321" inputmode="numeric">
+      <div class="err-msg" id="dr-patient-phone-err">연락처를 입력해주세요.</div>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">8</span> 환자 생년월일</label>
+      <input type="text" id="dr-patient-birth" placeholder="19811231" maxlength="8" inputmode="numeric">
+      <div class="field-hint">예: 19811231</div>
+      <div class="err-msg" id="dr-patient-birth-err">생년월일을 입력해주세요.</div>
+    </div>
+
+    <div class="field-row">
+      <label class="field-label"><span class="field-num">9</span> 환자 주소</label>
+      <input type="text" id="dr-patient-addr" placeholder="예) 서울시 강남구 역삼동">
+      <div class="err-msg" id="dr-patient-addr-err">주소를 입력해주세요.</div>
+    </div>
+  </div>
+
+  <!-- 대리수령 사유 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">10</span> 대리수령 사유</label>
+    <div class="radio-group" id="dr-reason-group">
+      <label class="radio-item" onclick="selectRadio(this,'dr-reason')">
+        <input type="radio" name="dr-reason" value="1.환자의식없음">
+        <span class="radio-text">① 환자의 의식이 없는 경우</span>
+      </label>
+      <label class="radio-item" onclick="selectRadio(this,'dr-reason')">
+        <input type="radio" name="dr-reason" value="2.장기동일처방">
+        <span class="radio-text">② 환자의 거동이 현저히 곤란하고, 동일한 상병에 대하여 장기간 동일한 처방이 이루어지는 경우 (신체적 거동 불가, 정신질환으로 인한 내원 불가 포함)</span>
+      </label>
+    </div>
+    <div class="err-msg" id="dr-reason-err">사유를 선택해주세요.</div>
+  </div>
+
+  <!-- 서명 -->
+  <div class="field-row">
+    <label class="field-label"><span class="field-num">11</span> 이름 서명 (정자로 써주세요)</label>
+    <div class="sig-area">
+      <canvas id="dr-sig-canvas" class="sig-canvas" height="160"></canvas>
+      <div class="sig-toolbar">
+        <span class="sig-hint">손가락이나 펜으로 이름을 써주세요</span>
+        <button class="btn-clear-sig" onclick="clearSig('dr-sig-canvas')">지우기</button>
+      </div>
+    </div>
+    <div class="err-msg" id="dr-sig-err">서명을 해주세요.</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-reset" onclick="resetForm('dr')">초기화</button>
+    <button class="btn btn-submit" onclick="submitForm('dr')">📄 PDF 저장 + 시트 전송</button>
+  </div>
+
+</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 구글 시트 설정 ──────────────────────────────
+// Apps Script 배포 후 아래 URL을 교체하세요
+const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyuYrU938U9ibu6Ix4equ3ZNeAognnYY2NQg2dyp-AyYHTpJN7gogi3BWmzTVGr18E/exec";
+const SHEET_ID = "1y11owv0wFpSYIGSVRiq05vk93izjofjv5hQ1cAnKvU0";
+
+// ── 탭 전환 ────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0&&name==='chojin')||(i===1&&name==='daeri'));
+  });
+  document.querySelectorAll('.form-page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  initCanvas(name === 'chojin' ? 'cj-sig-canvas' : 'dr-sig-canvas');
+}
+
+// ── Canvas Signature ───────────────────────────
+const sigStates = {};
+
+function initCanvas(id) {
+  const canvas = document.getElementById(id);
+  if (!canvas || canvas._initialized) return;
+  canvas._initialized = true;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth;
+
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  }
+
+  function startDraw(e) {
+    drawing = true;
+    const p = getPos(e);
+    lastX = p.x; lastY = p.y;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    e.preventDefault();
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1a3a5c';
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    lastX = p.x; lastY = p.y;
+    sigStates[id] = true;
+  }
+
+  function endDraw() { drawing = false; }
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', endDraw);
+}
+
+function clearSig(id) {
+  const canvas = document.getElementById(id);
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  sigStates[id] = false;
+}
+
+// ── Chart number lock ─────────────────────────
+function proceedChart(prefix) {
+  const val = document.getElementById(prefix + '-chart').value.trim();
+  if (!val) { showToast('차트번호를 입력해주세요.'); return; }
+  document.getElementById(prefix + '-chart-input-wrap').style.display = 'none';
+  const locked = document.getElementById(prefix + '-chart-locked');
+  locked.style.display = 'block';
+  document.getElementById(prefix + '-chart-display').textContent = '차트번호: ' + val + ' ✅';
+  showToast('차트번호 입력 완료. 이후 항목을 진행하세요.');
+}
+
+function editChart(prefix) {
+  document.getElementById(prefix + '-chart-input-wrap').style.display = 'block';
+  document.getElementById(prefix + '-chart-locked').style.display = 'none';
+}
+
+// ── Toggle agree ──────────────────────────────
+function toggleAgree(id) {
+  const cb = document.getElementById(id);
+  cb.checked = !cb.checked;
+  document.getElementById(id + '-label').classList.toggle('checked', cb.checked);
+}
+
+// ── Radio select ──────────────────────────────
+function selectRadio(item, name) {
+  document.querySelectorAll(`[name="${name}"]`).forEach(r => {
+    r.closest('.radio-item').classList.remove('selected');
+  });
+  item.classList.add('selected');
+  item.querySelector('input[type="radio"]').checked = true;
+}
+
+// ── Validation helpers ─────────────────────────
+function showErr(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('show', show);
+}
+
+function val(id) { return document.getElementById(id)?.value.trim() || ''; }
+function chk(id) { return document.getElementById(id)?.checked || false; }
+function radio(name) {
+  const el = document.querySelector(`[name="${name}"]:checked`);
+  return el ? el.value : '';
+}
+
+// ── Date helpers ──────────────────────────────
+function todayStr() {
+  const d = new Date();
+  const y = String(d.getFullYear()).slice(2);
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return y + m + dd;
+}
+
+function fullDateStr() {
+  return new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+}
+
+// ── Toast ──────────────────────────────────────
+function showToast(msg, duration=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ── PDF generator ─────────────────────────────
+function generatePDF(type, data, sigDataUrl) {
+  const win = window.open('', '_blank');
+  if (!win) { showToast('팝업 차단을 해제해주세요.'); return; }
+
+  const today = new Date().toLocaleDateString('ko-KR');
+  let content = '';
+
+  if (type === 'cj') {
+    const fname = data.filename;
+    content = `
+      <h2 style="text-align:center;color:#1a3a5c;font-family:'Noto Serif KR',serif;margin-bottom:4px">초진 접수 동의서</h2>
+      <p style="text-align:center;color:#888;font-size:13px;margin-bottom:24px">작성일: ${today}</p>
+      <table>
+        <tr><td>차트번호</td><td>${data.chart}</td></tr>
+        <tr><td>성명</td><td>${data.name}</td></tr>
+        <tr><td>주민번호 앞6자리</td><td>${data.id1}</td></tr>
+        <tr><td>주민번호 뒤7자리</td><td>*******</td></tr>
+        <tr><td>전화번호</td><td>${data.phone}</td></tr>
+        <tr><td>주소</td><td>${data.addr}</td></tr>
+      </table>
+      <h3 style="margin-top:24px;color:#1a3a5c">동의 항목</h3>
+      <ul>
+        <li>개인정보 수집·이용 동의: ${data.agree1?'✔ 동의':'✘ 미동의'}</li>
+        <li>진단서 발급 안내 동의: ${data.agree2?'✔ 동의':'✘ 미동의'}</li>
+        <li>본인확인 불가 진료 불가 동의: ${data.agree3?'✔ 동의':'✘ 미동의'}</li>
+        <li>발급 서류 환불 불가 동의: ${data.agree4?'✔ 동의':'✘ 미동의'}</li>
+        <li>상담료·검사비 발생 동의: ${data.agree5?'✔ 동의':'✘ 미동의'}</li>
+      </ul>`;
+  } else {
+    content = `
+      <h2 style="text-align:center;color:#1a3a5c;font-family:'Noto Serif KR',serif;margin-bottom:4px">대리 처방 동의서</h2>
+      <p style="text-align:center;color:#888;font-size:13px;margin-bottom:24px">작성일: ${today}</p>
+      <h3 style="color:#1a3a5c">방문자 정보</h3>
+      <table>
+        <tr><td>차트번호</td><td>${data.chart}</td></tr>
+        <tr><td>방문자 성명</td><td>${data.visitorName}</td></tr>
+        <tr><td>방문자 연락처</td><td>${data.visitorPhone}</td></tr>
+        <tr><td>방문자 생년월일</td><td>${data.visitorBirth}</td></tr>
+        <tr><td>방문자 주소</td><td>${data.visitorAddr}</td></tr>
+        <tr><td>환자와의 관계</td><td>${data.relation}</td></tr>
+      </table>
+      <h3 style="margin-top:18px;color:#1a3a5c">환자 정보</h3>
+      <table>
+        <tr><td>환자 성명</td><td>${data.patientName}</td></tr>
+        <tr><td>환자 연락처</td><td>${data.patientPhone}</td></tr>
+        <tr><td>환자 생년월일</td><td>${data.patientBirth}</td></tr>
+        <tr><td>환자 주소</td><td>${data.patientAddr}</td></tr>
+        <tr><td>대리수령 사유</td><td>${data.reason}</td></tr>
+      </table>`;
+  }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>${data.filename}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&family=Noto+Serif+KR:wght@700&display=swap" rel="stylesheet">
+<style>
+  body { font-family:'Noto Sans KR',sans-serif; max-width:680px; margin:40px auto; padding:0 20px; color:#222; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; }
+  td { padding:9px 12px; border:1px solid #ddd; font-size:14px; }
+  td:first-child { width:38%; background:#f5f3ef; font-weight:600; color:#1a3a5c; }
+  h3 { color:#1a3a5c; margin:18px 0 4px; font-size:15px; }
+  ul { padding-left:22px; margin-top:10px; }
+  li { padding:5px 0; font-size:14px; }
+  .sig-section { margin-top:28px; padding-top:18px; border-top:2px solid #1a3a5c; }
+  .sig-label { font-size:13px; color:#888; margin-bottom:8px; }
+  .sig-img { border:1px solid #ddd; border-radius:8px; max-width:320px; }
+  .footer { margin-top:36px; font-size:12px; color:#aaa; text-align:center; border-top:1px solid #eee; padding-top:12px; }
+  @media print { button { display:none } }
+</style>
+</head>
+<body>
+${content}
+<div class="sig-section">
+  <div class="sig-label">서명 (이름 정자)</div>
+  <img src="${sigDataUrl}" class="sig-img" alt="서명">
+</div>
+<div class="footer">파일명: ${data.filename}.pdf &nbsp;|&nbsp; ${today} 출력</div>
+<br>
+<button onclick="window.print()" style="padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖨️ 인쇄 / PDF 저장</button>
+</body></html>`);
+  win.document.close();
+}
+
+// ── Send to Google Sheets ──────────────────────
+async function sendToSheet(sheetName, rowData) {
+  if (SHEET_WEB_APP_URL === "여기에_Apps_Script_배포_URL_입력") {
+    console.log('Sheet URL not configured. Data:', rowData);
+    return false;
+  }
+  try {
+    await fetch(SHEET_WEB_APP_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sheet: sheetName, row: rowData })
+    });
+    return true;
+  } catch(e) {
+    console.error('Sheet send error:', e);
+    return false;
+  }
+}
+
+// ── Submit: 초진 ──────────────────────────────
+async function submitForm(prefix) {
+  let valid = true;
+
+  if (prefix === 'cj') {
+    const n = val('cj-name'); showErr('cj-name-err', !n); if(!n) valid=false;
+    const i1 = val('cj-id1'); showErr('cj-id1-err', i1.length!==6); if(i1.length!==6) valid=false;
+    const i2 = val('cj-id2'); showErr('cj-id2-err', i2.length!==7); if(i2.length!==7) valid=false;
+    const ph = val('cj-phone'); showErr('cj-phone-err', !ph); if(!ph) valid=false;
+    const ad = val('cj-addr'); showErr('cj-addr-err', !ad); if(!ad) valid=false;
+    const a1=chk('cj-agree1'),a2=chk('cj-agree2'),a3=chk('cj-agree3'),a4=chk('cj-agree4'),a5=chk('cj-agree5');
+    showErr('cj-agree1-err',!a1); showErr('cj-agree2-err',!a2); showErr('cj-agree3-err',!a3);
+    showErr('cj-agree4-err',!a4); showErr('cj-agree5-err',!a5);
+    if(!a1||!a2||!a3||!a4||!a5) valid=false;
+    const hasSig = sigStates['cj-sig-canvas'];
+    showErr('cj-sig-err', !hasSig); if(!hasSig) valid=false;
+    if (!valid) { showToast('⚠️ 누락된 항목을 확인해주세요.'); return; }
+
+    const chart = val('cj-chart');
+    const dateStr = todayStr();
+    const filename = `${chart}초진접수${dateStr}`;
+    const sigDataUrl = document.getElementById('cj-sig-canvas').toDataURL('image/png');
+
+    const data = { chart, name:n, id1:i1, id2:i2, phone:ph, addr:ad,
+      agree1:a1,agree2:a2,agree3:a3,agree4:a4,agree5:a5, filename };
+
+    generatePDF('cj', data, sigDataUrl);
+
+    const rowData = [fullDateStr(), chart, n, i1, '(보호)', ph, ad,
+      a1?'동의':'미동의', a2?'동의':'미동의', a3?'동의':'미동의',
+      a4?'동의':'미동의', a5?'동의':'미동의', '(서명이미지-PDF참조)', filename];
+    const sent = await sendToSheet('초진', rowData);
+    showToast(sent ? '✅ PDF 저장 + 시트 전송 완료!' : '📄 PDF 저장 완료 (시트 URL 미설정)');
+
+  } else {
+    // 대리처방 validation
+    const vn=val('dr-visitor-name'); showErr('dr-visitor-name-err',!vn); if(!vn) valid=false;
+    const vp=val('dr-visitor-phone'); showErr('dr-visitor-phone-err',!vp); if(!vp) valid=false;
+    const vb=val('dr-visitor-birth'); showErr('dr-visitor-birth-err',vb.length!==8); if(vb.length!==8) valid=false;
+    const va=val('dr-visitor-addr'); showErr('dr-visitor-addr-err',!va); if(!va) valid=false;
+    const rel=radio('dr-relation'); showErr('dr-relation-err',!rel); if(!rel) valid=false;
+    const pn=val('dr-patient-name'); showErr('dr-patient-name-err',!pn); if(!pn) valid=false;
+    const pp=val('dr-patient-phone'); showErr('dr-patient-phone-err',!pp); if(!pp) valid=false;
+    const pb=val('dr-patient-birth'); showErr('dr-patient-birth-err',pb.length!==8); if(pb.length!==8) valid=false;
+    const pa=val('dr-patient-addr'); showErr('dr-patient-addr-err',!pa); if(!pa) valid=false;
+    const rsn=radio('dr-reason'); showErr('dr-reason-err',!rsn); if(!rsn) valid=false;
+    const hasSig=sigStates['dr-sig-canvas']; showErr('dr-sig-err',!hasSig); if(!hasSig) valid=false;
+    if (!valid) { showToast('⚠️ 누락된 항목을 확인해주세요.'); return; }
+
+    const chart = val('dr-chart');
+    const dateStr = todayStr();
+    const filename = `${chart}${vn}${pn}대리처방동의${dateStr}`;
+    const sigDataUrl = document.getElementById('dr-sig-canvas').toDataURL('image/png');
+
+    const data = { chart, visitorName:vn, visitorPhone:vp, visitorBirth:vb, visitorAddr:va,
+      relation:rel, patientName:pn, patientPhone:pp, patientBirth:pb, patientAddr:pa,
+      reason:rsn, filename };
+
+    generatePDF('dr', data, sigDataUrl);
+
+    const rowData = [fullDateStr(), chart, vn, vp, vb, va, rel, pn, pp, pb, pa, rsn, '(서명이미지-PDF참조)', filename];
+    const sent = await sendToSheet('대리', rowData);
+    showToast(sent ? '✅ PDF 저장 + 시트 전송 완료!' : '📄 PDF 저장 완료 (시트 URL 미설정)');
+  }
+}
+
+// ── Reset ──────────────────────────────────────
+function resetForm(prefix) {
+  if (!confirm('모든 입력 내용을 초기화할까요?')) return;
+  if (prefix === 'cj') {
+    ['cj-name','cj-id1','cj-id2','cj-phone','cj-addr'].forEach(id => document.getElementById(id).value='');
+    ['cj-agree1','cj-agree2','cj-agree3','cj-agree4','cj-agree5'].forEach(id => {
+      document.getElementById(id).checked=false;
+      document.getElementById(id+'-label').classList.remove('checked');
+    });
+    clearSig('cj-sig-canvas');
+    editChart('cj');
+    document.getElementById('cj-chart').value='';
+  } else {
+    document.querySelectorAll('#page-daeri input[type="text"], #page-daeri input[type="tel"]')
+      .forEach(el => el.value='');
+    document.querySelectorAll('[name="dr-relation"], [name="dr-reason"]').forEach(r => {
+      r.checked=false;
+      r.closest('.radio-item').classList.remove('selected');
+    });
+    clearSig('dr-sig-canvas');
+    editChart('dr');
+    document.getElementById('dr-chart').value='';
+  }
+  showToast('초기화 완료');
+}
+
+// ── GAS code snippet ──────────────────────────
+document.getElementById('gas-code-display').textContent = `// Google Apps Script 코드
+// 구글 시트 → 확장 프로그램 → Apps Script 에 붙여넣기
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.openById(
+      "${SHEET_ID}"
+    );
+    let sheet = ss.getSheetByName(data.sheet);
+    if (!sheet) sheet = ss.insertSheet(data.sheet);
+
+    // 헤더 (첫 실행 시 자동 생성)
+    if (sheet.getLastRow() === 0) {
+      if (data.sheet === '초진') {
+        sheet.appendRow(['작성일시','차트번호','성명','주민앞6',
+          '주민뒤7','전화번호','주소','개인정보동의','진단서동의',
+          '본인확인동의','서류환불동의','비용동의','서명','파일명']);
+      } else {
+        sheet.appendRow(['작성일시','차트번호','방문자성명','방문자연락처',
+          '방문자생년월일','방문자주소','관계','환자성명','환자연락처',
+          '환자생년월일','환자주소','대리수령사유','서명','파일명']);
+      }
+    }
+    sheet.appendRow(data.row);
+    return ContentService.createTextOutput(
+      JSON.stringify({result:'success'})
+    ).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(
+      JSON.stringify({result:'error', message: err.toString()})
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
+// ── Init ───────────────────────────────────────
+window.addEventListener('load', () => {
+  initCanvas('cj-sig-canvas');
+});
+
+window.addEventListener('resize', () => {
+  ['cj-sig-canvas','dr-sig-canvas'].forEach(id => {
+    const c = document.getElementById(id);
+    if (c) { c._initialized = false; initCanvas(id); }
+  });
+});
+</script>
+</body>
+</html>
