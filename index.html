@@ -672,7 +672,7 @@
 
   <div class="btn-row">
     <button class="btn btn-reset" onclick="resetForm('cj')">초기화</button>
-    <button class="btn btn-submit" onclick="submitForm('cj')">📄 PDF 저장 + 시트 전송</button>
+    <button class="btn btn-submit" onclick="submitForm('cj')">✅ 작성 완료후 이곳을 눌러주세요</button>
   </div>
   </div><!-- /cj-form-body -->
 
@@ -838,7 +838,7 @@
 
     <div class="btn-row">
       <button class="btn btn-reset" onclick="resetForm('dr')">초기화</button>
-      <button class="btn btn-submit" onclick="submitDaeri('save')">📄 PDF 저장 + 시트 전송</button>
+      <button class="btn btn-submit" onclick="submitDaeri('save')">✅ 작성 완료후 이곳을 눌러주세요</button>
     </div>
 
   </div><!-- /dr-form-body -->
@@ -1121,7 +1121,72 @@ ${isCj ? `
 </div>
 <div class="footer">파일명: ${data.filename}.pdf &nbsp;|&nbsp; ${today} 출력</div>
 <br>`}
-<button class="no-print" onclick="window.print()" style="margin-top:14px;padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖨️ 인쇄 / PDF 저장</button>
+<button class="no-print" onclick="window.print()" style="margin-top:14px;padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖥️ 데스크탑 — PDF 저장</button>
+<button class="no-print" id="drive-btn" onclick="uploadToDrive()" style="margin-top:14px;margin-left:10px;padding:12px 28px;background:#1a7a4c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">📱 패드/핸드폰 — 구글드라이브로 보내기</button>
+<div id="drive-msg" style="margin-top:10px;font-size:13px;color:#555;font-family:'Noto Sans KR',sans-serif"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const DRIVE_FOLDER_ID = '1dIFcizhdnuvA_v-ydcJDd51zSIiyWWdg';
+const DRIVE_UPLOADER_URL = 'https://script.google.com/macros/s/AKfycbzFR4dqmK32DDSHf8s6D0IJzmOFJYakSyBFOCx5MXrcb-zA5XMs9Dk3cBKNkzBCzOc/exec';
+
+async function uploadToDrive() {
+  const btn = document.getElementById('drive-btn');
+  const msg = document.getElementById('drive-msg');
+  btn.disabled = true;
+  btn.textContent = '⏳ 변환 중...';
+  msg.textContent = 'PDF로 변환하고 있습니다. 잠시 기다려 주세요...';
+
+  try {
+    // 인쇄 버튼 숨기고 캡처
+    document.querySelectorAll('.no-print').forEach(el => el.style.visibility='hidden');
+    const canvas = await html2canvas(document.body, { scale: 2, useCORS: true, logging: false });
+    document.querySelectorAll('.no-print').forEach(el => el.style.visibility='');
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * pageW) / canvas.width;
+
+    if (imgH <= pageH) {
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+    } else {
+      // 내용이 긴 경우 여러 페이지로
+      let y = 0;
+      while (y < imgH) {
+        if (y > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, -(y), imgW, imgH);
+        y += pageH;
+      }
+    }
+
+    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+    const fname = document.title || 'document';
+
+    btn.textContent = '⏳ 드라이브 업로드 중...';
+    msg.textContent = '구글드라이브에 업로드하고 있습니다...';
+
+    const resp = await fetch(DRIVE_UPLOADER_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'uploadPdf', filename: fname + '.pdf', pdfBase64, folderId: DRIVE_FOLDER_ID })
+    });
+
+    btn.textContent = '✅ 드라이브 전송 완료!';
+    msg.textContent = '구글드라이브(psychibae@gmail.com)에 저장되었습니다.';
+    btn.style.background = '#555';
+  } catch(e) {
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = '📱 패드/핸드폰 — 구글드라이브로 보내기';
+    msg.textContent = '❌ 오류가 발생했습니다. 다시 시도해 주세요.';
+  }
+}
+</script>
 </body></html>`);
   win.document.close();
 }
@@ -1313,8 +1378,71 @@ function buildDaeriPdfHtml(data, sigDataUrl) {
 </div>
 
 <br>
-<button class="no-print" onclick="window.print()" style="padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:10px">🖨️ 인쇄 / PDF 저장</button>
-</body></html>`;
+<button class="no-print" onclick="window.print()" style="padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:10px">🖥️ 데스크탑 — PDF 저장</button>
+<button class="no-print" id="drive-btn" onclick="uploadToDrive()" style="padding:12px 28px;background:#1a7a4c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:10px;margin-left:10px">📱 패드/핸드폰 — 구글드라이브로 보내기</button>
+<div id="drive-msg" style="margin-top:10px;font-size:13px;color:#555;font-family:'Noto Sans KR',sans-serif"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const DRIVE_FOLDER_ID = '1dIFcizhdnuvA_v-ydcJDd51zSIiyWWdg';
+const DRIVE_UPLOADER_URL = 'https://script.google.com/macros/s/AKfycbzFR4dqmK32DDSHf8s6D0IJzmOFJYakSyBFOCx5MXrcb-zA5XMs9Dk3cBKNkzBCzOc/exec';
+
+async function uploadToDrive() {
+  const btn = document.getElementById('drive-btn');
+  const msg = document.getElementById('drive-msg');
+  btn.disabled = true;
+  btn.textContent = '⏳ 변환 중...';
+  msg.textContent = 'PDF로 변환하고 있습니다. 잠시 기다려 주세요...';
+
+  try {
+    document.querySelectorAll('.no-print').forEach(el => el.style.visibility='hidden');
+    const canvas = await html2canvas(document.body, { scale: 2, useCORS: true, logging: false });
+    document.querySelectorAll('.no-print').forEach(el => el.style.visibility='');
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * pageW) / canvas.width;
+
+    if (imgH <= pageH) {
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+    } else {
+      let y = 0;
+      while (y < imgH) {
+        if (y > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, -(y), imgW, imgH);
+        y += pageH;
+      }
+    }
+
+    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+    const fname = document.title || 'document';
+
+    btn.textContent = '⏳ 드라이브 업로드 중...';
+    msg.textContent = '구글드라이브에 업로드하고 있습니다...';
+
+    await fetch(DRIVE_UPLOADER_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'uploadPdf', filename: fname + '.pdf', pdfBase64, folderId: DRIVE_FOLDER_ID })
+    });
+
+    btn.textContent = '✅ 드라이브 전송 완료!';
+    msg.textContent = '구글드라이브(psychibae@gmail.com)에 저장되었습니다.';
+    btn.style.background = '#555';
+  } catch(e) {
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = '📱 패드/핸드폰 — 구글드라이브로 보내기';
+    msg.textContent = '❌ 오류가 발생했습니다. 다시 시도해 주세요.';
+  }
+}
+</script>
+</body></html>\`;
 }
 
 // ── 대리처방 submit ─────────────────────────────
