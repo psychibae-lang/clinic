@@ -672,7 +672,7 @@
 
   <div class="btn-row">
     <button class="btn btn-reset" onclick="resetForm('cj')">초기화</button>
-    <button class="btn btn-submit" onclick="submitForm('cj')" style="font-size:0.88rem">✅ 작성 완료후 이곳을 눌러주세요</button>
+    <button class="btn btn-submit" onclick="submitForm('cj')">📄 PDF 저장 + 시트 전송</button>
   </div>
   </div><!-- /cj-form-body -->
 
@@ -838,7 +838,7 @@
 
     <div class="btn-row">
       <button class="btn btn-reset" onclick="resetForm('dr')">초기화</button>
-      <button class="btn btn-submit" onclick="submitDaeri()" style="font-size:0.88rem">✅ 작성 완료후 이곳을 눌러주세요</button>
+      <button class="btn btn-submit" onclick="submitDaeri('save')">📄 PDF 저장 + 시트 전송</button>
     </div>
 
   </div><!-- /dr-form-body -->
@@ -926,15 +926,14 @@ function clearSig(id) {
   sigStates[id] = false;
 }
 
-// ── Chart number lock ─────────────────────────
 function proceedChart(prefix) {
   const chartVal = document.getElementById(prefix + '-chart').value.trim();
   if (!chartVal) { showToast('차트번호를 입력해주세요.'); return; }
 
+  // 직접 작성 모드: 폼 표시 후 캔버스 초기화
   const formBody = document.getElementById(prefix + '-form-body');
   if (formBody) formBody.style.display = 'block';
 
-  // 캔버스: 폼이 보인 직후 초기화
   const canvasId = prefix === 'cj' ? 'cj-sig-canvas' : 'dr-sig-canvas';
   const c = document.getElementById(canvasId);
   if (c) { c._initialized = false; }
@@ -949,6 +948,9 @@ function proceedChart(prefix) {
 function editChart(prefix) {
   document.getElementById(prefix + '-chart-input-wrap').style.display = 'block';
   document.getElementById(prefix + '-chart-locked').style.display = 'none';
+  // 폼 다시 표시
+  const formBody = document.getElementById(prefix + '-form-body');
+  if (formBody) formBody.style.display = 'block';
 }
 
 // ── Toggle agree ──────────────────────────────
@@ -1002,109 +1004,125 @@ function showToast(msg, duration=2500) {
 }
 
 // ── PDF generator ─────────────────────────────
-function buildPdfButtons(filename) {
-  const GAS = 'https://script.google.com/macros/s/AKfycbzFR4dqmK32DDSHf8s6D0IJzmOFJYakSyBFOCx5MXrcb-zA5XMs9Dk3cBKNkzBCzOc/exec';
-  const FOLDER = '1dIFcizhdnuvA_v-ydcJDd51zSIiyWWdg';
-  return `<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
-  <button class="np" onclick="window.print()" style="padding:12px 22px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖥️ 데스크탑 — PDF 저장 (인쇄)</button>
-  <button class="np" id="dbtn" onclick="uploadToDrive('${GAS}','${FOLDER}','${filename}')" style="padding:12px 22px;background:#1a7a4c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">📱 패드/핸드폰 — 구글드라이브 저장</button>
-</div>
-<div id="dmsg" style="margin-top:8px;font-size:12px;color:#555;font-family:'Noto Sans KR',sans-serif"></div>
-<script>
-async function uploadToDrive(gasUrl, folderId, fname) {
-  const btn = document.getElementById('dbtn');
-  const msg = document.getElementById('dmsg');
-  btn.disabled = true;
-  btn.textContent = '⏳ 전송 중...';
-  msg.textContent = '구글드라이브에 저장하고 있습니다...';
-  try {
-    document.querySelectorAll('.np').forEach(el => el.style.display='none');
-    const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
-    document.querySelectorAll('.np').forEach(el => el.style.display='');
-
-    // TextEncoder로 UTF-8 바이트 → base64 (btoa 한글 깨짐 방지)
-    const bytes = new TextEncoder().encode(html);
-    let binary = '';
-    bytes.forEach(b => binary += String.fromCharCode(b));
-    const b64 = btoa(binary);
-
-    // XMLHttpRequest로 전송 (fetch no-cors와 동일하나 더 안정적)
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', gasUrl, true);
-    xhr.setRequestHeader('Content-Type', 'text/plain');
-    xhr.onload = function() {
-      btn.textContent = '✅ 드라이브 저장 완료!';
-      btn.style.background = '#555';
-      msg.textContent = '구글드라이브 [다운로드] 폴더에 저장되었습니다.';
-    };
-    xhr.onerror = function() {
-      // no-cors 환경에서 onerror가 와도 실제로는 전송 성공인 경우 있음
-      btn.textContent = '✅ 전송 요청 완료';
-      btn.style.background = '#555';
-      msg.textContent = '드라이브 [다운로드] 폴더를 확인해 주세요.';
-    };
-    xhr.send(JSON.stringify({ action: 'uploadHtml', filename: fname + '.html', htmlBase64: b64, folderId: folderId }));
-
-  } catch(e) {
-    console.error(e);
-    btn.disabled = false;
-    btn.textContent = '📱 패드/핸드폰 — 구글드라이브 저장';
-    msg.textContent = '❌ 오류: ' + e.message;
-  }
-}
-<\/script>`;
-}
-
 function generatePDF(type, data, sigDataUrl) {
   const win = window.open('', '_blank');
   if (!win) { showToast('팝업 차단을 해제해주세요.'); return; }
+
   const today = new Date().toLocaleDateString('ko-KR');
+  let content = '';
 
-  const cjStyle = `@page{size:A4 portrait;margin:10mm 12mm 8mm}
-html,body{margin:0;padding:0}
-body{font-family:'Noto Sans KR',sans-serif;color:#222;font-size:11.5px}
-h2{text-align:center;color:#1a3a5c;font-family:'Noto Serif KR',serif;font-size:15px;margin:0 0 2px}
-.sub{text-align:center;color:#888;font-size:10px;margin-bottom:8px}
-table{width:100%;border-collapse:collapse;margin-top:6px}
-td{padding:5px 8px;border:1px solid #ccc;font-size:11px;line-height:1.45}
-.lh td:first-child{background:#f0f3f8;font-weight:600;color:#1a3a5c;white-space:nowrap;width:24%}
-.ah td:first-child{background:#f0f3f8;font-weight:600;color:#1a3a5c;width:30%}
-h3{color:#1a3a5c;margin:7px 0 2px;font-size:12px;border-top:1px solid #ccc;padding-top:5px}
-.sf{margin-top:6px;display:flex;align-items:center;gap:14px;border-top:1.5px solid #1a3a5c;padding-top:5px}
-.sl{font-size:10px;color:#888;white-space:nowrap}
-.si{height:44px;max-width:220px;border:1px solid #ddd;border-radius:4px}
-.ft{margin-left:auto;font-size:9.5px;color:#bbb}
-@media print{.np{display:none}}
-@media screen{body{max-width:680px;margin:20px auto;padding:0 16px}}`;
+  if (type === 'cj') {
+    content = `
+      <h2>초진 접수 동의서</h2>
+      <p class="sub">작성일: ${today}</p>
+      <table class="info-table">
+        <tr><td>차트번호</td><td>${data.chart}</td><td>성명</td><td>${data.name}</td></tr>
+        <tr><td>주민번호 앞 6자리</td><td>${data.id1}</td><td>주민번호 뒤 7자리</td><td>*******</td></tr>
+        <tr><td>전화번호</td><td>${data.phone}</td><td>주소</td><td>${data.addr}</td></tr>
+      </table>
+      <h3>동의 항목</h3>
+      <table class="agree-table">
+        <tr>
+          <td>6. 개인정보 수집·이용 동의</td>
+          <td>귀하의 소중한 개인정보는 의료법 및 개인정보보호법의 관련규정에 의하여 진료 및 진료 지원의 목적으로 수집 및 이용됩니다.<br><strong style="color:${data.agree1?'#27ae60':'#c0392b'}">${data.agree1?'✔ 동의':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td>7. 진단서 발급 관련 동의</td>
+          <td>금일 진료 후 진단서 발급 불가하며, 최소 1~2개월의 외래 진료 후 발급 가능함을 확인합니다.<br><strong style="color:${data.agree2?'#27ae60':'#c0392b'}">${data.agree2?'✔ 동의':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td>8. 본인 확인 불가 시 진료 불가 동의</td>
+          <td>주민등록증, 운전면허증 등으로 본인 확인이 되지 않을 경우 진료 불가함에 동의합니다.<br><strong style="color:${data.agree3?'#27ae60':'#c0392b'}">${data.agree3?'✔ 동의':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td>9. 발급 서류 환불 불가 동의</td>
+          <td>발급된 서류는 환불이 되지 않음을 이해하고 동의합니다.<br><strong style="color:${data.agree4?'#27ae60':'#c0392b'}">${data.agree4?'✔ 동의':'✘ 미동의'}</strong></td>
+        </tr>
+        <tr>
+          <td>10. 상담료·검사비 발생 동의</td>
+          <td>약 처방이 없더라도 상담료 및 검사비 등이 발생됨을 이해하고 동의합니다.<br><strong style="color:${data.agree5?'#27ae60':'#c0392b'}">${data.agree5?'✔ 동의':'✘ 미동의'}</strong></td>
+        </tr>
+      </table>`;
+  } else {
+    content = `
+      <h2 style="text-align:center;color:#1a3a5c;font-family:'Noto Serif KR',serif;margin-bottom:4px">대리 처방 동의서</h2>
+      <p style="text-align:center;color:#888;font-size:13px;margin-bottom:24px">작성일: ${today}</p>
+      <h3 style="color:#1a3a5c">방문자 정보</h3>
+      <table>
+        <tr><td>차트번호</td><td>${data.chart}</td></tr>
+        <tr><td>방문자 성명</td><td>${data.visitorName}</td></tr>
+        <tr><td>방문자 연락처</td><td>${data.visitorPhone}</td></tr>
+        <tr><td>방문자 생년월일</td><td>${data.visitorBirth}</td></tr>
+        <tr><td>방문자 주소</td><td>${data.visitorAddr}</td></tr>
+        <tr><td>환자와의 관계</td><td>${data.relation}</td></tr>
+      </table>
+      <h3 style="margin-top:18px;color:#1a3a5c">환자 정보</h3>
+      <table>
+        <tr><td>환자 성명</td><td>${data.patientName}</td></tr>
+        <tr><td>환자 연락처</td><td>${data.patientPhone}</td></tr>
+        <tr><td>환자 생년월일</td><td>${data.patientBirth}</td></tr>
+        <tr><td>환자 주소</td><td>${data.patientAddr}</td></tr>
+        <tr><td>대리수령 사유</td><td>${data.reason}</td></tr>
+      </table>`;
+  }
 
-  const html = `<!DOCTYPE html><html lang="ko"><head>
-<meta charset="UTF-8"><title>${data.filename}</title>
+  // 초진은 A4 한 장 전용 레이아웃, 대리처방은 기존 레이아웃
+  const isCj = (type === 'cj');
+  const printStyle = isCj ? `
+  @page { size: A4 portrait; margin: 10mm 12mm 8mm; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family:'Noto Sans KR',sans-serif; color:#222; font-size:11.5px; }
+  h2 { text-align:center; color:#1a3a5c; font-family:'Noto Serif KR',serif; font-size:15px; margin:0 0 2px; }
+  .sub { text-align:center; color:#888; font-size:10px; margin-bottom:8px; }
+  table { width:100%; border-collapse:collapse; margin-top:6px; }
+  td { padding:5px 8px; border:1px solid #ccc; font-size:11px; line-height:1.45; }
+  td:first-child { background:#f0f3f8; font-weight:600; color:#1a3a5c; white-space:nowrap; }
+  .info-table td:first-child { width:28%; }
+  .agree-table td:first-child { width:30%; }
+  h3 { color:#1a3a5c; margin:7px 0 2px; font-size:12px; border-top:1px solid #ccc; padding-top:5px; }
+  .sig-section { margin-top:6px; display:flex; align-items:center; gap:14px; border-top:1.5px solid #1a3a5c; padding-top:5px; }
+  .sig-label { font-size:10px; color:#888; white-space:nowrap; }
+  .sig-img { height:44px; max-width:220px; border:1px solid #ddd; border-radius:4px; }
+  .footer { margin-top:4px; font-size:9.5px; color:#bbb; text-align:right; }
+  @media print { .no-print { display:none } }
+  @media screen { body { max-width:680px; margin:20px auto; padding:0 16px; } }
+` : `
+  @media print { button { display:none } }
+  body { font-family:'Noto Sans KR',sans-serif; max-width:680px; margin:40px auto; padding:0 20px; color:#222; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; }
+  td { padding:9px 12px; border:1px solid #ddd; font-size:14px; }
+  td:first-child { width:38%; background:#f5f3ef; font-weight:600; color:#1a3a5c; }
+  h3 { color:#1a3a5c; margin:18px 0 4px; font-size:15px; }
+  .sig-section { margin-top:28px; padding-top:18px; border-top:2px solid #1a3a5c; }
+  .sig-label { font-size:13px; color:#888; margin-bottom:8px; }
+  .sig-img { border:1px solid #ddd; border-radius:8px; max-width:320px; }
+  .footer { margin-top:36px; font-size:12px; color:#aaa; text-align:center; border-top:1px solid #eee; padding-top:12px; }
+`;
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>${data.filename}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&family=Noto+Serif+KR:wght@700&display=swap" rel="stylesheet">
-<style>${cjStyle}</style></head><body>
-<h2>초진 접수 동의서</h2>
-<p class="sub">작성일: ${today}</p>
-<table class="lh">
-  <tr><td>차트번호</td><td>${data.chart}</td><td style="background:#f0f3f8;font-weight:600;color:#1a3a5c;white-space:nowrap;width:24%">성명</td><td>${data.name}</td></tr>
-  <tr><td>주민번호 앞 6자리</td><td>${data.id1}</td><td style="background:#f0f3f8;font-weight:600;color:#1a3a5c;white-space:nowrap">주민번호 뒤 7자리</td><td>*******</td></tr>
-  <tr><td>전화번호</td><td>${data.phone}</td><td style="background:#f0f3f8;font-weight:600;color:#1a3a5c;white-space:nowrap">주소</td><td>${data.addr}</td></tr>
-</table>
-<h3>동의 항목</h3>
-<table class="ah">
-  <tr><td>6. 개인정보 수집·이용 동의</td><td>귀하의 개인정보는 의료법 및 개인정보보호법에 의거 진료 목적으로 수집·이용됩니다.<br><strong style="color:${data.agree1?'#27ae60':'#c0392b'}">${data.agree1?'✔ 동의':'✘ 미동의'}</strong></td></tr>
-  <tr><td>7. 진단서 발급 관련 동의</td><td>금일 진료 후 진단서 발급 불가, 최소 1~2개월 외래 진료 후 발급 가능합니다.<br><strong style="color:${data.agree2?'#27ae60':'#c0392b'}">${data.agree2?'✔ 동의':'✘ 미동의'}</strong></td></tr>
-  <tr><td>8. 본인 확인 불가 시 진료 불가 동의</td><td>주민등록증·운전면허증 등 본인 확인 불가 시 진료가 불가합니다.<br><strong style="color:${data.agree3?'#27ae60':'#c0392b'}">${data.agree3?'✔ 동의':'✘ 미동의'}</strong></td></tr>
-  <tr><td>9. 발급 서류 환불 불가 동의</td><td>발급된 서류는 환불이 되지 않습니다.<br><strong style="color:${data.agree4?'#27ae60':'#c0392b'}">${data.agree4?'✔ 동의':'✘ 미동의'}</strong></td></tr>
-  <tr><td>10. 상담료·검사비 발생 동의</td><td>약 처방 여부와 무관하게 상담료 및 검사비가 발생합니다.<br><strong style="color:${data.agree5?'#27ae60':'#c0392b'}">${data.agree5?'✔ 동의':'✘ 미동의'}</strong></td></tr>
-</table>
-<div class="sf">
-  <span class="sl">서명 (이름 정자)</span>
-  <img src="${sigDataUrl}" class="si" alt="서명">
-  <span class="ft">${data.filename} | ${today}</span>
+<style>${printStyle}</style>
+</head>
+<body>
+${content}
+${isCj ? `
+<div class="sig-section">
+  <span class="sig-label">서명 (이름 정자)</span>
+  <img src="${sigDataUrl}" class="sig-img" alt="서명">
+  <span class="footer" style="margin-left:auto">${data.filename} &nbsp;|&nbsp; ${today}</span>
+</div>` : `
+<div class="sig-section">
+  <div class="sig-label">서명 (이름 정자)</div>
+  <img src="${sigDataUrl}" class="sig-img" alt="서명">
 </div>
-${buildPdfButtons(data.filename)}
-</body></html>`;
-
-  win.document.write(html);
+<div class="footer">파일명: ${data.filename}.pdf &nbsp;|&nbsp; ${today} 출력</div>
+<br>`}
+<button class="no-print" onclick="window.print()" style="margin-top:14px;padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖨️ 인쇄 / PDF 저장</button>
+</body></html>`);
   win.document.close();
 }
 
@@ -1157,7 +1175,7 @@ async function submitForm(prefix) {
       a1?'동의':'미동의', a2?'동의':'미동의', a3?'동의':'미동의',
       a4?'동의':'미동의', a5?'동의':'미동의', '(드라이브링크)', filename];
     const sent = await sendToSheet('초진', rowData, sigDataUrl);
-    showToast(sent ? '✅ 시트 전송 완료!' : '📄 PDF 창 열림');
+    showToast(sent ? '✅ PDF 저장 + 시트 전송 완료!' : '📄 PDF 저장 완료 (시트 URL 미설정)');
 
   }
 }
@@ -1295,23 +1313,25 @@ function buildDaeriPdfHtml(data, sigDataUrl) {
 </div>
 
 <br>
-${buildPdfButtons(data.filename)}
+<button class="no-print" onclick="window.print()" style="padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:10px">🖨️ 인쇄 / PDF 저장</button>
 </body></html>`;
 }
 
 // ── 대리처방 submit ─────────────────────────────
-async function submitDaeri() {
+async function submitDaeri(action) {
   const data = validateDaeri();
   if (!data) { showToast('⚠️ 누락된 항목을 확인해주세요.'); return; }
 
   const sigDataUrl = document.getElementById('dr-sig-canvas').toDataURL('image/png');
   const pdfHtml = buildDaeriPdfHtml(data, sigDataUrl);
 
+  // PDF 새창에서 인쇄/저장
   const win = window.open('', '_blank');
   if (!win) { showToast('팝업 차단을 해제해주세요.'); return; }
   win.document.write(pdfHtml);
   win.document.close();
 
+  // 구글 시트 전송
   const rowData = [
     fullDateStr(), data.chart,
     data.visitorName, data.visitorPhone, data.visitorBirth, data.visitorAddr, data.relation,
@@ -1319,7 +1339,7 @@ async function submitDaeri() {
     data.reason, '(드라이브링크)', data.filename
   ];
   const sent = await sendToSheet('대리', rowData, sigDataUrl);
-  showToast(sent ? '✅ 시트 전송 완료!' : '📄 PDF 창 열림');
+  showToast(sent ? '✅ PDF 저장 + 시트 전송 완료!' : '📄 PDF 창 열림');
 }
 
 // ── Reset ──────────────────────────────────────
