@@ -1003,44 +1003,35 @@ function showToast(msg, duration=2500) {
 
 // ── PDF generator ─────────────────────────────
 function buildPdfButtons(filename) {
-  const FOLDER = '1dIFcizhdnuvA_v-ydcJDd51zSIiyWWdg';
-  const GAS = 'https://script.google.com/macros/s/AKfycbzFR4dqmK32DDSHf8s6D0IJzmOFJYakSyBFOCx5MXrcb-zA5XMs9Dk3cBKNkzBCzOc/exec';
   return `<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
-  <button class="np" onclick="window.print()" style="padding:12px 22px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖥️ 데스크탑 — PDF 저장</button>
-  <button class="np" id="dbtn" onclick="driveUp('${FOLDER}','${GAS}','${filename}')" style="padding:12px 22px;background:#1a7a4c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">📱 패드/핸드폰 — 구글드라이브로 보내기</button>
+  <button class="np" onclick="window.print()" style="padding:12px 22px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖥️ 데스크탑 — PDF 저장 (인쇄)</button>
+  <button class="np" id="dbtn" onclick="mobileDown('${filename}')" style="padding:12px 22px;background:#1a7a4c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">📱 패드/핸드폰 — 파일 저장</button>
 </div>
 <div id="dmsg" style="margin-top:8px;font-size:12px;color:#555;font-family:'Noto Sans KR',sans-serif"></div>
 <script>
-async function driveUp(folderId, gasUrl, fname) {
+function mobileDown(fname) {
   const btn = document.getElementById('dbtn');
   const msg = document.getElementById('dmsg');
-  btn.disabled = true;
-  btn.textContent = '⏳ 드라이브 전송 중...';
-  msg.textContent = '구글드라이브에 전송하고 있습니다. 잠시 기다려 주세요...';
   try {
-    // 버튼 영역 숨기고 HTML 전체 캡처 (서명은 이미 base64 인라인)
+    // 버튼 숨김 → outerHTML 캡처 → 버튼 복원
     document.querySelectorAll('.np').forEach(el => el.style.display='none');
-    const htmlContent = document.documentElement.outerHTML;
+    const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
     document.querySelectorAll('.np').forEach(el => el.style.display='');
 
-    // HTML을 base64로 인코딩
-    const b64 = btoa(unescape(encodeURIComponent(htmlContent)));
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fname + '.html';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
 
-    await fetch(gasUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'uploadHtml', filename: fname + '.html', htmlBase64: b64, folderId })
-    });
-
-    btn.textContent = '✅ 드라이브 전송 완료!';
-    msg.textContent = '구글드라이브(psychibae@gmail.com)에 저장되었습니다. 드라이브에서 인쇄하시면 됩니다.';
+    btn.textContent = '✅ 파일 저장됨';
     btn.style.background = '#555';
+    msg.textContent = '저장된 .html 파일을 브라우저에서 열고 인쇄(PDF저장) 하시면 됩니다.';
   } catch(e) {
-    console.error(e);
-    btn.disabled = false;
-    btn.textContent = '📱 패드/핸드폰 — 구글드라이브로 보내기';
-    msg.textContent = '❌ 오류가 발생했습니다. 다시 시도해 주세요.';
+    msg.textContent = '❌ 저장 실패. 데스크탑 버튼을 이용해 주세요.';
   }
 }
 <\/script>`;
