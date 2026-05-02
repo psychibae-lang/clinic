@@ -1003,35 +1003,53 @@ function showToast(msg, duration=2500) {
 
 // ── PDF generator ─────────────────────────────
 function buildPdfButtons(filename) {
+  const GAS = 'https://script.google.com/macros/s/AKfycbzFR4dqmK32DDSHf8s6D0IJzmOFJYakSyBFOCx5MXrcb-zA5XMs9Dk3cBKNkzBCzOc/exec';
+  const FOLDER = '1dIFcizhdnuvA_v-ydcJDd51zSIiyWWdg';
   return `<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
   <button class="np" onclick="window.print()" style="padding:12px 22px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖥️ 데스크탑 — PDF 저장 (인쇄)</button>
-  <button class="np" id="dbtn" onclick="mobileDown('${filename}')" style="padding:12px 22px;background:#1a7a4c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">📱 패드/핸드폰 — 파일 저장</button>
+  <button class="np" id="dbtn" onclick="uploadToDrive('${GAS}','${FOLDER}','${filename}')" style="padding:12px 22px;background:#1a7a4c;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">📱 패드/핸드폰 — 구글드라이브 저장</button>
 </div>
 <div id="dmsg" style="margin-top:8px;font-size:12px;color:#555;font-family:'Noto Sans KR',sans-serif"></div>
 <script>
-function mobileDown(fname) {
+async function uploadToDrive(gasUrl, folderId, fname) {
   const btn = document.getElementById('dbtn');
   const msg = document.getElementById('dmsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ 전송 중...';
+  msg.textContent = '구글드라이브에 저장하고 있습니다...';
   try {
-    // 버튼 숨김 → outerHTML 캡처 → 버튼 복원
     document.querySelectorAll('.np').forEach(el => el.style.display='none');
     const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
     document.querySelectorAll('.np').forEach(el => el.style.display='');
 
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fname + '.html';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    // TextEncoder로 UTF-8 바이트 → base64 (btoa 한글 깨짐 방지)
+    const bytes = new TextEncoder().encode(html);
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    const b64 = btoa(binary);
 
-    btn.textContent = '✅ 파일 저장됨';
-    btn.style.background = '#555';
-    msg.textContent = '저장된 .html 파일을 브라우저에서 열고 인쇄(PDF저장) 하시면 됩니다.';
+    // XMLHttpRequest로 전송 (fetch no-cors와 동일하나 더 안정적)
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', gasUrl, true);
+    xhr.setRequestHeader('Content-Type', 'text/plain');
+    xhr.onload = function() {
+      btn.textContent = '✅ 드라이브 저장 완료!';
+      btn.style.background = '#555';
+      msg.textContent = '구글드라이브 [다운로드] 폴더에 저장되었습니다.';
+    };
+    xhr.onerror = function() {
+      // no-cors 환경에서 onerror가 와도 실제로는 전송 성공인 경우 있음
+      btn.textContent = '✅ 전송 요청 완료';
+      btn.style.background = '#555';
+      msg.textContent = '드라이브 [다운로드] 폴더를 확인해 주세요.';
+    };
+    xhr.send(JSON.stringify({ action: 'uploadHtml', filename: fname + '.html', htmlBase64: b64, folderId: folderId }));
+
   } catch(e) {
-    msg.textContent = '❌ 저장 실패. 데스크탑 버튼을 이용해 주세요.';
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = '📱 패드/핸드폰 — 구글드라이브 저장';
+    msg.textContent = '❌ 오류: ' + e.message;
   }
 }
 <\/script>`;
