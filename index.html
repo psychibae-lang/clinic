@@ -600,7 +600,6 @@
     <div class="err-msg" id="cj-addr-err">주소를 입력해주세요.</div>
   </div>
 
-  <!-- 6~11. 동의 항목 -->
   <div class="field-row">
     <label class="field-label"><span class="field-num">6</span> 개인정보 수집·이용 동의</label>
     <div class="agree-text" style="margin-bottom:10px;font-size:0.88rem;color:#555;line-height:1.6">
@@ -706,7 +705,7 @@
 
   <div class="btn-row">
     <button class="btn btn-reset" onclick="resetForm('cj')">초기화</button>
-    <button class="btn btn-submit" onclick="submitForm('cj')">📄 PDF 저장 + 시트 전송</button>
+    <button class="btn btn-submit" onclick="submitForm('cj')">✅ 완료 후 이곳을 눌러주세요</button>
   </div>
   </div><!-- /cj-form-body -->
 
@@ -872,7 +871,7 @@
 
     <div class="btn-row">
       <button class="btn btn-reset" onclick="resetForm('dr')">초기화</button>
-      <button class="btn btn-submit" onclick="submitDaeri('save')">📄 PDF 저장 + 시트 전송</button>
+      <button class="btn btn-submit" onclick="submitDaeri('save')">✅ 완료 후 이곳을 눌러주세요</button>
     </div>
 
   </div><!-- /dr-form-body -->
@@ -1766,14 +1765,15 @@ async function openDetail(id, table) {
   const dt = new Date(row.created_at).toLocaleString('ko-KR');
 
   if (table === 'chojin') {
+    const idStr = (row.id1||'') + ' - ' + (row.id2||'');
     html = `
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
         ${tr('접수일시', dt)}
         ${tr('차트번호', row.chart)}
-        ${tr('성명', row.name)}
-        ${tr('주민번호', (row.id1||'') + ' - ' + (row.id2||''))}
-        ${tr('전화번호', row.phone)}
-        ${tr('주소', row.addr)}
+        ${trCopy('성명', row.name||'')}
+        ${trCopy('주민번호', idStr)}
+        ${trCopy('전화번호', row.phone||'')}
+        ${trCopy('주소', row.addr||'')}
         ${tr('개인정보 동의(6)', row.agree1?'✅':'❌')}
         ${tr('진단서 발급 동의(7)', row.agree2?'✅':'❌')}
         ${tr('본인확인 불가 동의(8)', row.agree3?'✅':'❌')}
@@ -1811,9 +1811,50 @@ async function openDetail(id, table) {
 
 function tr(label, val) {
   return `<tr style="border-bottom:1px solid #f3f4f6;">
-    <td style="padding:8px 4px;color:#6b7280;width:130px;">${label}</td>
+    <td style="padding:8px 4px;color:#6b7280;width:130px;vertical-align:middle;">${label}</td>
     <td style="padding:8px 4px;font-weight:500;">${val||'-'}</td>
   </tr>`;
+}
+
+function trCopy(label, val) {
+  const safe = (val||'-').replace(/'/g, "\\'");
+  return `<tr style="border-bottom:1px solid #f3f4f6;">
+    <td style="padding:8px 4px;color:#6b7280;width:130px;vertical-align:middle;">${label}</td>
+    <td style="padding:6px 4px;font-weight:500;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="flex:1;">${val||'-'}</span>
+        <button onclick="copyCell('${safe}', this)"
+          style="flex-shrink:0;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">
+          📋 복사
+        </button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+function copyCell(text, btn) {
+  if (!text || text === '-') { showToast('복사할 내용이 없습니다.'); return; }
+  const orig = btn.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ 복사됨';
+    btn.style.background = '#f0fdf4';
+    btn.style.borderColor = '#86efac';
+    btn.style.color = '#15803d';
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.background = '#f0f9ff';
+      btn.style.borderColor = '#bae6fd';
+      btn.style.color = '#0369a1';
+    }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✅ 복사됨';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
 }
 
 function closeModal() {
@@ -1896,7 +1937,6 @@ function printModalPDF() {
 }
 
 function loadSearchPage() {
-  // 자동 전체 조회
   document.getElementById('search-type').value = 'all';
   document.getElementById('search-chart').value = '';
   document.getElementById('search-name').value = '';
@@ -1906,8 +1946,6 @@ function loadSearchPage() {
 // ── 수정 모달 ─────────────────────────────────────────
 function openEditModal() {
   if (!currentModalData) return;
-  const { row, table } = currentModalData;
-  // 비번 입력 초기화
   document.getElementById('edit-pw-input').value = '';
   document.getElementById('edit-pw-section').style.display = 'block';
   document.getElementById('edit-fields-section').style.display = 'none';
@@ -1925,48 +1963,105 @@ function verifyEditPw() {
     document.getElementById('edit-pw-input').value = '';
     return;
   }
-  // 비번 맞으면 수정 필드 표시
   const { row, table } = currentModalData;
-  const currentName = table === 'chojin' ? (row.name || '') : (row.visitor_name || '');
+  const currentName  = table === 'chojin' ? (row.name||'') : (row.visitor_name||'');
   const currentChart = row.chart || '';
-  document.getElementById('edit-name-label').textContent = `(현재: ${currentName})`;
+  document.getElementById('edit-name-label').textContent  = `(현재: ${currentName})`;
   document.getElementById('edit-chart-label').textContent = `(현재: ${currentChart})`;
-  document.getElementById('edit-name-input').value = currentName;
+  document.getElementById('edit-name-input').value  = currentName;
   document.getElementById('edit-chart-input').value = currentChart;
-  document.getElementById('edit-pw-section').style.display = 'none';
+  document.getElementById('edit-pw-section').style.display    = 'none';
   document.getElementById('edit-fields-section').style.display = 'block';
 }
 
 async function saveEdit() {
   if (!currentModalData) return;
   const { row, table } = currentModalData;
-  const newName = document.getElementById('edit-name-input').value.trim();
+  const newName  = document.getElementById('edit-name-input').value.trim();
   const newChart = document.getElementById('edit-chart-input').value.trim();
   if (!newName || !newChart) { alert('이름과 차트번호를 모두 입력해주세요.'); return; }
   if (!confirm(`수정하시겠습니까?\n이름: ${newName}\n차트번호: ${newChart}`)) return;
 
   const nameField = table === 'chojin' ? 'name' : 'visitor_name';
-  const payload = { [nameField]: newName, chart: newChart };
+  const payload   = { [nameField]: newName, chart: newChart };
 
   try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${row.id}`, {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(row.id)}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPA_ANON}`,
         'apikey': SUPA_ANON,
-        'Prefer': 'return=minimal'
+        'Prefer': 'return=representation'
       },
       body: JSON.stringify(payload)
     });
+    const body = await r.text();
     if (r.ok) {
+      // 수정된 데이터로 currentModalData 갱신
+      try {
+        const updated = JSON.parse(body);
+        if (Array.isArray(updated) && updated.length > 0) {
+          currentModalData.row = updated[0];
+        }
+      } catch(_) {}
       showToast('✅ 수정 완료!');
       closeEditModal();
       closeModal();
       doSearch();
     } else {
+      alert(`❌ 수정 실패 (${r.status}):\n${body}`);
+    }
+  } catch(e) {
+    alert(`❌ 오류: ${e.message}`);
+  }
+}
+
+// ── 삭제 기능 ─────────────────────────────────────────
+function openDeleteModal() {
+  if (!currentModalData) return;
+  document.getElementById('delete-pw-input').value = '';
+  document.getElementById('delete-modal').style.display = 'block';
+  const { row, table } = currentModalData;
+  const name = table === 'chojin' ? (row.name||'') : (row.visitor_name||'');
+  const dt   = new Date(row.created_at).toLocaleString('ko-KR');
+  document.getElementById('delete-target-info').textContent =
+    `${table === 'chojin' ? '초진' : '대리'}  ${name}  차트 ${row.chart||'-'}  (${dt})`;
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').style.display = 'none';
+}
+
+async function confirmDelete() {
+  const pw = document.getElementById('delete-pw-input').value;
+  if (pw !== 'hanriver0325') {
+    alert('⚠️ 비밀번호가 틀렸습니다.');
+    document.getElementById('delete-pw-input').value = '';
+    return;
+  }
+  if (!currentModalData) return;
+  const { row, table } = currentModalData;
+  const name = table === 'chojin' ? (row.name||'') : (row.visitor_name||'');
+  if (!confirm(`정말 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.\n\n대상: ${name} / 차트 ${row.chart||'-'}`)) return;
+
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(row.id)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${SUPA_ANON}`,
+        'apikey': SUPA_ANON,
+        'Prefer': 'return=minimal'
+      }
+    });
+    if (r.ok) {
+      showToast('🗑️ 삭제 완료!');
+      closeDeleteModal();
+      closeModal();
+      doSearch();
+    } else {
       const err = await r.text();
-      alert(`❌ 수정 실패: ${err}`);
+      alert(`❌ 삭제 실패 (${r.status}):\n${err}`);
     }
   } catch(e) {
     alert(`❌ 오류: ${e.message}`);
@@ -2015,7 +2110,8 @@ async function saveEdit() {
       <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
     </div>
     <div id="modal-body" style="padding:20px;"></div>
-    <div style="padding:12px 20px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">
+    <div style="padding:12px 20px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <button onclick="openDeleteModal()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer;font-weight:bold;margin-right:auto;">🗑️ 삭제</button>
       <button onclick="openEditModal()" style="background:#d97706;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:bold;">✏️ 수정</button>
       <button onclick="printModalPDF()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:bold;">🖨️ PDF 출력</button>
       <button onclick="closeModal()" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">닫기</button>
@@ -2052,6 +2148,32 @@ async function saveEdit() {
         </div>
         <button onclick="saveEdit()" style="width:100%;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;">💾 저장</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 모달 -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10001;overflow-y:auto;">
+  <div style="background:#fff;max-width:400px;margin:100px auto;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.35);">
+    <div style="background:#dc2626;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:17px;font-weight:bold;">🗑️ 데이터 삭제</span>
+      <button onclick="closeDeleteModal()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;color:#991b1b;line-height:1.6;">
+        ⚠️ <strong>삭제된 데이터는 복구할 수 없습니다.</strong><br>
+        아래 대상을 삭제하려면 관리자 비밀번호를 입력하세요.
+      </div>
+      <div id="delete-target-info" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:13px;color:#374151;margin-bottom:16px;font-weight:600;"></div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:14px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">🔒 관리자 비밀번호</label>
+        <input type="password" id="delete-pw-input" placeholder="비밀번호 입력"
+          style="width:100%;padding:12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:15px;"
+          onkeydown="if(event.key==='Enter') confirmDelete()">
+      </div>
+      <button onclick="confirmDelete()" style="width:100%;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">
+        🗑️ 삭제 확인
+      </button>
     </div>
   </div>
 </div>
