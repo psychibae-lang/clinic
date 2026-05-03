@@ -514,6 +514,7 @@
   <div class="tabs">
     <button class="tab active" onclick="switchTab('chojin')">초진 접수</button>
     <button class="tab" onclick="switchTab('daeri')">대리 처방</button>
+    <button class="tab" onclick="switchTab('search')">📋 접수 조회</button>
   </div>
 </div>
 
@@ -863,10 +864,8 @@ const SUPA_BUCKET = "signatures";  // Storage 버킷 이름
 // ── Supabase: 서명 이미지 업로드 ──────────────────
 async function uploadSignature(sigDataUrl, filename) {
   try {
-    // base64 → Blob 변환
     const res = await fetch(sigDataUrl);
     const blob = await res.blob();
-
     const path = `${filename}_${Date.now()}.png`;
     const uploadRes = await fetch(
       `${SUPA_URL}/storage/v1/object/${SUPA_BUCKET}/${path}`,
@@ -881,10 +880,11 @@ async function uploadSignature(sigDataUrl, filename) {
       }
     );
     if (!uploadRes.ok) {
-      console.error('Signature upload failed:', await uploadRes.text());
+      const errText = await uploadRes.text();
+      console.error('Signature upload failed:', uploadRes.status, errText);
+      showToast(`⚠️ 서명 업로드 실패(${uploadRes.status}) — DB는 저장됩니다`);
       return null;
     }
-    // 공개 URL 반환
     return `${SUPA_URL}/storage/v1/object/public/${SUPA_BUCKET}/${path}`;
   } catch(e) {
     console.error('uploadSignature error:', e);
@@ -906,7 +906,9 @@ async function insertToSupabase(table, payload) {
       body: JSON.stringify(payload)
     });
     if (!r.ok) {
-      console.error('Supabase insert failed:', await r.text());
+      const errBody = await r.text();
+      console.error('Supabase insert failed:', r.status, errBody);
+      showToast(`❌ Supabase 저장 실패(${r.status}): ${errBody.slice(0,60)}`);
       return false;
     }
     return true;
@@ -919,11 +921,13 @@ async function insertToSupabase(table, payload) {
 // ── 탭 전환 ────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', (i===0&&name==='chojin')||(i===1&&name==='daeri'));
+    t.classList.toggle('active',
+      (i===0&&name==='chojin')||(i===1&&name==='daeri')||(i===2&&name==='search'));
   });
   document.querySelectorAll('.form-page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
-  initCanvas(name === 'chojin' ? 'cj-sig-canvas' : 'dr-sig-canvas');
+  if (name !== 'search') initCanvas(name === 'chojin' ? 'cj-sig-canvas' : 'dr-sig-canvas');
+  if (name === 'search') loadSearchPage();
 }
 
 // ── Canvas Signature ───────────────────────────
@@ -1183,6 +1187,54 @@ ${isCj ? `
 <div class="footer">파일명: ${data.filename}.pdf &nbsp;|&nbsp; ${today} 출력</div>
 <br>`}
 <button class="no-print" onclick="window.print()" style="margin-top:14px;padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">🖨️ 인쇄 / PDF 저장</button>
+
+<!-- ══════════════════════════════════════════
+     접수 조회 페이지
+══════════════════════════════════════════ -->
+<div id="page-search" class="form-page">
+<div class="form-wrap">
+  <div class="section-badge">📋 접수 조회</div>
+
+  <!-- 진단 버튼 -->
+  <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;">
+    ⚠️ 데이터가 안 들어올 경우 → <button onclick="runDiagnosis()" style="background:#ffc107;border:none;border-radius:5px;padding:4px 12px;cursor:pointer;font-weight:bold;">🔧 연결 진단</button>
+    <div id="diag-result" style="margin-top:8px;white-space:pre-wrap;font-size:12px;color:#555;"></div>
+  </div>
+
+  <!-- 검색 옵션 -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <select id="search-type" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+      <option value="all">전체</option>
+      <option value="chojin">초진 접수</option>
+      <option value="daeri">대리 처방</option>
+    </select>
+    <input id="search-chart" type="text" placeholder="차트번호 검색" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;flex:1;min-width:120px;">
+    <input id="search-name" type="text" placeholder="이름 검색" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;flex:1;min-width:120px;">
+    <button onclick="doSearch()" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;font-weight:bold;">🔍 검색</button>
+  </div>
+
+  <!-- 결과 목록 -->
+  <div id="search-results" style="display:flex;flex-direction:column;gap:12px;">
+    <div style="text-align:center;color:#999;padding:40px;">검색 버튼을 눌러주세요</div>
+  </div>
+</div>
+</div>
+
+<!-- 상세 조회 모달 -->
+<div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;overflow-y:auto;">
+  <div style="background:#fff;max-width:700px;margin:40px auto;border-radius:16px;overflow:hidden;">
+    <div style="background:#2563eb;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <span id="modal-title" style="font-size:17px;font-weight:bold;"></span>
+      <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+    </div>
+    <div id="modal-body" style="padding:20px;"></div>
+    <div style="padding:12px 20px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="printModalPDF()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:bold;">🖨️ PDF 출력</button>
+      <button onclick="closeModal()" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
+
 </body></html>`);
   win.document.close();
 }
@@ -1390,6 +1442,54 @@ function buildDaeriPdfHtml(data, sigDataUrl) {
 
 <br>
 <button class="no-print" onclick="window.print()" style="padding:12px 28px;background:#1a3a5c;color:white;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:10px">🖨️ 인쇄 / PDF 저장</button>
+
+<!-- ══════════════════════════════════════════
+     접수 조회 페이지
+══════════════════════════════════════════ -->
+<div id="page-search" class="form-page">
+<div class="form-wrap">
+  <div class="section-badge">📋 접수 조회</div>
+
+  <!-- 진단 버튼 -->
+  <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;">
+    ⚠️ 데이터가 안 들어올 경우 → <button onclick="runDiagnosis()" style="background:#ffc107;border:none;border-radius:5px;padding:4px 12px;cursor:pointer;font-weight:bold;">🔧 연결 진단</button>
+    <div id="diag-result" style="margin-top:8px;white-space:pre-wrap;font-size:12px;color:#555;"></div>
+  </div>
+
+  <!-- 검색 옵션 -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <select id="search-type" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+      <option value="all">전체</option>
+      <option value="chojin">초진 접수</option>
+      <option value="daeri">대리 처방</option>
+    </select>
+    <input id="search-chart" type="text" placeholder="차트번호 검색" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;flex:1;min-width:120px;">
+    <input id="search-name" type="text" placeholder="이름 검색" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;flex:1;min-width:120px;">
+    <button onclick="doSearch()" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;font-weight:bold;">🔍 검색</button>
+  </div>
+
+  <!-- 결과 목록 -->
+  <div id="search-results" style="display:flex;flex-direction:column;gap:12px;">
+    <div style="text-align:center;color:#999;padding:40px;">검색 버튼을 눌러주세요</div>
+  </div>
+</div>
+</div>
+
+<!-- 상세 조회 모달 -->
+<div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;overflow-y:auto;">
+  <div style="background:#fff;max-width:700px;margin:40px auto;border-radius:16px;overflow:hidden;">
+    <div style="background:#2563eb;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <span id="modal-title" style="font-size:17px;font-weight:bold;"></span>
+      <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+    </div>
+    <div id="modal-body" style="padding:20px;"></div>
+    <div style="padding:12px 20px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="printModalPDF()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:bold;">🖨️ PDF 출력</button>
+      <button onclick="closeModal()" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
+
 </body></html>`;
 }
 
@@ -1477,6 +1577,308 @@ window.addEventListener('resize', () => {
     if (c) { c._initialized = false; initCanvas(id); }
   });
 });
+
+// ══════════════════════════════════════════════════════
+//  접수 조회 + 진단 기능
+// ══════════════════════════════════════════════════════
+
+let currentModalData = null;
+
+// ── 진단 ────────────────────────────────────────────
+async function runDiagnosis() {
+  const el = document.getElementById('diag-result');
+  el.textContent = '🔄 진단 중...';
+  const results = [];
+
+  // 1. Supabase REST ping
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/chojin?limit=1`, {
+      headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` }
+    });
+    if (r.ok) {
+      results.push('✅ chojin 테이블 접속 성공');
+    } else {
+      const txt = await r.text();
+      results.push(`❌ chojin 테이블 오류 (${r.status}): ${txt.slice(0,120)}`);
+      results.push('   → Supabase SQL Editor에서 supabase_tables.sql을 실행해주세요');
+    }
+  } catch(e) { results.push('❌ 네트워크 오류: ' + e.message); }
+
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/daeri?limit=1`, {
+      headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` }
+    });
+    if (r.ok) results.push('✅ daeri 테이블 접속 성공');
+    else results.push(`❌ daeri 테이블 오류 (${r.status})`);
+  } catch(e) { results.push('❌ daeri 테이블 오류: ' + e.message); }
+
+  // 2. Storage 버킷 ping
+  try {
+    const r = await fetch(`${SUPA_URL}/storage/v1/bucket/signatures`, {
+      headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` }
+    });
+    if (r.ok) results.push('✅ signatures 버킷 접속 성공');
+    else results.push(`❌ signatures 버킷 없음 (${r.status}) → Storage에서 버킷을 만들어주세요`);
+  } catch(e) { results.push('❌ Storage 오류: ' + e.message); }
+
+  el.textContent = results.join('\n');
+}
+
+// ── 검색 ────────────────────────────────────────────
+async function doSearch() {
+  const type   = document.getElementById('search-type').value;
+  const chart  = document.getElementById('search-chart').value.trim();
+  const name   = document.getElementById('search-name').value.trim();
+  const el     = document.getElementById('search-results');
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">🔄 불러오는 중...</div>';
+
+  const tables = type === 'all' ? ['chojin','daeri'] : [type];
+  let allRows  = [];
+
+  for (const tbl of tables) {
+    let url = `${SUPA_URL}/rest/v1/${tbl}?order=created_at.desc&limit=50`;
+    if (chart) url += `&chart=eq.${encodeURIComponent(chart)}`;
+    if (name && tbl === 'chojin') url += `&name=ilike.*${encodeURIComponent(name)}*`;
+    if (name && tbl === 'daeri')  url += `&visitor_name=ilike.*${encodeURIComponent(name)}*`;
+
+    try {
+      const r = await fetch(url, {
+        headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` }
+      });
+      if (!r.ok) { el.innerHTML = `<div style='color:red;padding:20px;'>❌ 오류: ${await r.text()}<br><br>🔧 진단 버튼을 눌러 확인해주세요.</div>`; return; }
+      const rows = await r.json();
+      rows.forEach(row => allRows.push({ ...row, _table: tbl }));
+    } catch(e) {
+      el.innerHTML = `<div style='color:red;padding:20px;'>❌ 네트워크 오류: ${e.message}</div>`;
+      return;
+    }
+  }
+
+  allRows.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+  if (!allRows.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">검색 결과가 없습니다</div>';
+    return;
+  }
+
+  el.innerHTML = allRows.map(row => {
+    const dt  = new Date(row.created_at).toLocaleString('ko-KR');
+    const tag = row._table === 'chojin'
+      ? '<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:12px;font-size:12px;">초진</span>'
+      : '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:12px;">대리</span>';
+    const mainName = row._table === 'chojin' ? (row.name||'-') : (row.visitor_name||'-');
+    const chartNo  = row.chart || '-';
+    return `<div onclick="openDetail('${row.id}','${row._table}')" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='none'">
+      <div>
+        ${tag}
+        <span style="font-weight:bold;margin-left:8px;">${mainName}</span>
+        <span style="color:#6b7280;margin-left:8px;font-size:13px;">차트 ${chartNo}</span>
+      </div>
+      <div style="font-size:12px;color:#9ca3af;">${dt}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── 상세 조회 ────────────────────────────────────────
+async function openDetail(id, table) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`, {
+    headers: { 'apikey': SUPA_ANON, 'Authorization': `Bearer ${SUPA_ANON}` }
+  });
+  const rows = await r.json();
+  if (!rows.length) return;
+  const row = rows[0];
+  currentModalData = { row, table };
+
+  document.getElementById('modal-title').textContent =
+    table === 'chojin' ? `초진 접수 — ${row.name||''}` : `대리 처방 — ${row.visitor_name||''}`;
+
+  let html = '';
+  const dt = new Date(row.created_at).toLocaleString('ko-KR');
+
+  if (table === 'chojin') {
+    html = `
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        ${tr('접수일시', dt)}
+        ${tr('차트번호', row.chart)}
+        ${tr('성명', row.name)}
+        ${tr('주민번호', (row.id1||'') + ' - ' + (row.id2||''))}
+        ${tr('전화번호', row.phone)}
+        ${tr('주소', row.addr)}
+        ${tr('개인정보 동의', row.agree1?'✅':'❌')}
+        ${tr('민감정보 동의', row.agree2?'✅':'❌')}
+        ${tr('제3자 제공', row.agree3?'✅':'❌')}
+        ${tr('마케팅 동의', row.agree4?'✅':'❌')}
+        ${tr('촬영 동의', row.agree5?'✅':'❌')}
+      </table>
+      ${row.signature_url ? `<div style="margin-top:16px;"><div style="font-size:12px;color:#6b7280;margin-bottom:6px;">서명</div><img src="${row.signature_url}" style="border:1px solid #e5e7eb;border-radius:8px;max-width:100%;max-height:160px;background:#f9fafb;"></div>` : '<div style="color:#9ca3af;margin-top:12px;">서명 이미지 없음</div>'}
+    `;
+  } else {
+    html = `
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        ${tr('접수일시', dt)}
+        ${tr('차트번호', row.chart)}
+        <tr><td colspan="2" style="padding:6px 0;font-weight:bold;color:#2563eb;border-bottom:1px solid #f3f4f6;">▸ 대리수령자</td></tr>
+        ${tr('성명', row.visitor_name)}
+        ${tr('연락처', row.visitor_phone)}
+        ${tr('생년월일', row.visitor_birth)}
+        ${tr('주소', row.visitor_addr)}
+        ${tr('환자와의 관계', row.relation)}
+        <tr><td colspan="2" style="padding:6px 0;font-weight:bold;color:#16a34a;border-bottom:1px solid #f3f4f6;">▸ 환자 정보</td></tr>
+        ${tr('환자 성명', row.patient_name)}
+        ${tr('환자 연락처', row.patient_phone)}
+        ${tr('환자 생년월일', row.patient_birth)}
+        ${tr('환자 주소', row.patient_addr)}
+        ${tr('대리수령 사유', row.reason)}
+      </table>
+      ${row.signature_url ? `<div style="margin-top:16px;"><div style="font-size:12px;color:#6b7280;margin-bottom:6px;">서명</div><img src="${row.signature_url}" style="border:1px solid #e5e7eb;border-radius:8px;max-width:100%;max-height:160px;background:#f9fafb;"></div>` : '<div style="color:#9ca3af;margin-top:12px;">서명 이미지 없음</div>'}
+    `;
+  }
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('detail-modal').style.display = 'block';
+}
+
+function tr(label, val) {
+  return `<tr style="border-bottom:1px solid #f3f4f6;">
+    <td style="padding:8px 4px;color:#6b7280;width:130px;">${label}</td>
+    <td style="padding:8px 4px;font-weight:500;">${val||'-'}</td>
+  </tr>`;
+}
+
+function closeModal() {
+  document.getElementById('detail-modal').style.display = 'none';
+  currentModalData = null;
+}
+
+// ── PDF 출력 (조회 화면에서) ─────────────────────────
+function printModalPDF() {
+  if (!currentModalData) return;
+  const { row, table } = currentModalData;
+  const win = window.open('', '_blank');
+  if (!win) { showToast('팝업 차단을 해제해주세요.'); return; }
+  const today = new Date(row.created_at).toLocaleDateString('ko-KR');
+  const sigImg = row.signature_url
+    ? `<div class="sig-box"><img src="${row.signature_url}" style="max-height:80px;"></div>`
+    : '<div class="sig-box" style="height:80px;"></div>';
+
+  let body = '';
+  if (table === 'chojin') {
+    body = `
+      <h2>초진 접수 동의서</h2>
+      <p class="sub">작성일: ${today}</p>
+      <table>
+        <tr><th>차트번호</th><td>${row.chart||''}</td><th>성명</th><td>${row.name||''}</td></tr>
+        <tr><th>주민번호</th><td colspan="3">${row.id1||''} - ${row.id2||''}</td></tr>
+        <tr><th>전화번호</th><td>${row.phone||''}</td><th>주소</th><td>${row.addr||''}</td></tr>
+      </table>
+      <h3>동의 항목</h3>
+      <ul>
+        <li>개인정보 수집·이용 동의: ${row.agree1?'✅ 동의':'❌ 미동의'}</li>
+        <li>민감정보 수집·이용 동의: ${row.agree2?'✅ 동의':'❌ 미동의'}</li>
+        <li>제3자 제공 동의: ${row.agree3?'✅ 동의':'❌ 미동의'}</li>
+        <li>마케팅 활용 동의: ${row.agree4?'✅ 동의':'❌ 미동의'}</li>
+        <li>촬영 동의: ${row.agree5?'✅ 동의':'❌ 미동의'}</li>
+      </ul>
+      <h3>서명</h3>
+      ${sigImg}
+    `;
+  } else {
+    body = `
+      <h2>대리처방 수령 확인서</h2>
+      <p class="sub">작성일: ${today}</p>
+      <h3>대리수령자</h3>
+      <table>
+        <tr><th>성명</th><td>${row.visitor_name||''}</td><th>연락처</th><td>${row.visitor_phone||''}</td></tr>
+        <tr><th>생년월일</th><td>${row.visitor_birth||''}</td><th>환자와의 관계</th><td>${row.relation||''}</td></tr>
+        <tr><th>주소</th><td colspan="3">${row.visitor_addr||''}</td></tr>
+      </table>
+      <h3>환자 정보</h3>
+      <table>
+        <tr><th>성명</th><td>${row.patient_name||''}</td><th>연락처</th><td>${row.patient_phone||''}</td></tr>
+        <tr><th>생년월일</th><td>${row.patient_birth||''}</td><th>차트번호</th><td>${row.chart||''}</td></tr>
+        <tr><th>주소</th><td colspan="3">${row.patient_addr||''}</td></tr>
+      </table>
+      <h3>대리수령 사유</h3>
+      <p>${row.reason||''}</p>
+      <h3>서명</h3>
+      ${sigImg}
+    `;
+  }
+
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>접수확인서</title>
+    <style>
+      body{font-family:'맑은 고딕',sans-serif;max-width:700px;margin:30px auto;font-size:13px;}
+      h2{text-align:center;border-bottom:2px solid #333;padding-bottom:10px;}
+      h3{font-size:13px;margin:14px 0 6px;color:#333;}
+      .sub{text-align:center;color:#666;font-size:12px;margin-top:-8px;}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+      th,td{border:1px solid #ccc;padding:6px 10px;font-size:12px;}
+      th{background:#f5f5f5;width:100px;}
+      ul{padding-left:20px;} li{margin:3px 0;}
+      .sig-box{border:1px solid #ccc;padding:8px;display:inline-block;border-radius:4px;}
+      @media print{body{margin:10px;}}
+    </style>
+  </head><body>${body}<script>window.onload=()=>window.print();<\/script></body></html>`);
+  win.document.close();
+}
+
+function loadSearchPage() {
+  // 자동 전체 조회
+  document.getElementById('search-type').value = 'all';
+  document.getElementById('search-chart').value = '';
+  document.getElementById('search-name').value = '';
+  doSearch();
+}
+
 </script>
+
+<!-- ══════════════════════════════════════════
+     접수 조회 페이지
+══════════════════════════════════════════ -->
+<div id="page-search" class="form-page">
+<div class="form-wrap">
+  <div class="section-badge">📋 접수 조회</div>
+
+  <!-- 진단 버튼 -->
+  <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;">
+    ⚠️ 데이터가 안 들어올 경우 → <button onclick="runDiagnosis()" style="background:#ffc107;border:none;border-radius:5px;padding:4px 12px;cursor:pointer;font-weight:bold;">🔧 연결 진단</button>
+    <div id="diag-result" style="margin-top:8px;white-space:pre-wrap;font-size:12px;color:#555;"></div>
+  </div>
+
+  <!-- 검색 옵션 -->
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <select id="search-type" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;">
+      <option value="all">전체</option>
+      <option value="chojin">초진 접수</option>
+      <option value="daeri">대리 처방</option>
+    </select>
+    <input id="search-chart" type="text" placeholder="차트번호 검색" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;flex:1;min-width:120px;">
+    <input id="search-name" type="text" placeholder="이름 검색" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;flex:1;min-width:120px;">
+    <button onclick="doSearch()" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:14px;cursor:pointer;font-weight:bold;">🔍 검색</button>
+  </div>
+
+  <!-- 결과 목록 -->
+  <div id="search-results" style="display:flex;flex-direction:column;gap:12px;">
+    <div style="text-align:center;color:#999;padding:40px;">검색 버튼을 눌러주세요</div>
+  </div>
+</div>
+</div>
+
+<!-- 상세 조회 모달 -->
+<div id="detail-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;overflow-y:auto;">
+  <div style="background:#fff;max-width:700px;margin:40px auto;border-radius:16px;overflow:hidden;">
+    <div style="background:#2563eb;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <span id="modal-title" style="font-size:17px;font-weight:bold;"></span>
+      <button onclick="closeModal()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;">✕</button>
+    </div>
+    <div id="modal-body" style="padding:20px;"></div>
+    <div style="padding:12px 20px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="printModalPDF()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:bold;">🖨️ PDF 출력</button>
+      <button onclick="closeModal()" style="background:#6b7280;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
