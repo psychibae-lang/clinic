@@ -565,6 +565,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     .gds-stage { font-size: 9px !important; }
   }
 
+
+/* 비밀번호 오버레이 */
+#pw-overlay{position:fixed;inset:0;background:#1a1a2e;z-index:9999;display:flex;align-items:center;justify-content:center;}
+#pw-box{background:#fff;border-radius:16px;padding:36px 32px;text-align:center;width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.3);}
+#pw-box h2{font-size:18px;font-weight:700;margin-bottom:6px;color:#1a1a1a;}
+#pw-box p{font-size:13px;color:#888;margin-bottom:20px;}
+#pw-inp{width:100%;padding:12px;border:2px solid #e0e4ef;border-radius:8px;font-size:16px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:12px;}
+#pw-inp:focus{border-color:#4f8ef7;}
+#pw-btn{width:100%;padding:12px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;}
+#pw-err{color:#e53e3e;font-size:13px;margin-top:8px;height:18px;}
+
 </style>
 </head>
 <body>
@@ -585,16 +596,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+
+<div id="pw-overlay">
+  <div id="pw-box">
+    <h2>🔒 한강의원</h2>
+    <p>접수 시스템에 접근하려면<br>비밀번호를 입력하세요</p>
+    <input type="password" id="pw-inp" placeholder="••••••••" maxlength="20"
+      onkeydown="if(event.key==='Enter')checkPw()">
+    <button id="pw-btn" onclick="checkPw()">확인</button>
+    <div id="pw-err"></div>
+  </div>
+</div>
+
 <div class="app">
 
 <div class="screen active" id="s-admin">
   <div class="hdr">정신건강 검사 관리 (일반용)</div>
-  <div class="sub-hdr" style="grid-template-columns:1fr">
+  <div class="sub-hdr" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr">
     <span class="act" onclick="switchSubTab('issue',this)">검사 선택</span>
-    <span onclick="switchSubTab('status',this)" style="display:none">완료 현황</span>
-    <span onclick="switchSubTab('daeri',this)" style="display:none">대리 처방</span>
-    <span onclick="switchSubTab('chojin',this)" style="display:none">초진 접수</span>
-    <span onclick="switchSubTab('search',this)" style="display:none">접수 조회</span>
+    <span onclick="switchSubTab('status',this)">완료 현황</span>
+    <span onclick="switchSubTab('daeri',this)">대리 처방</span>
+    <span onclick="switchSubTab('chojin',this)">초진 접수</span>
+    <span onclick="switchSubTab('search',this)">접수 조회</span>
+    <span onclick="switchSubTab('appt',this);loadAppts()">예약</span>
     <span onclick="switchSubTab('clin',this)" style="display:none">임상가 척도</span>
   </div>
   <div class="tab-content act" id="tab-issue" style="font-weight:700;font-size:calc(1em + 4px)">
@@ -1060,6 +1084,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </main>
 </div>
     </div>
+  </div>
+<!-- ══ 예약 탭 ══ -->
+  <div class="tab-content" id="tab-appt" style="font-weight:700;font-size:calc(1em + 4px)">
+    <div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center;background:#f7f8fc;border-bottom:1px solid #e0e4ef;">
+      <span style="font-size:14px;font-weight:700;color:#333;">📅 예약 현황 (오늘~8일)</span>
+      <button id="apptLoadBtn" onclick="loadAppts()" style="font-size:12px;padding:5px 12px;background:#4f8ef7;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔄 새로고침</button>
+    </div>
+    <div style="padding:8px 14px;background:#f0f7ff;border-bottom:1px solid #e0e4ef;display:flex;flex-wrap:wrap;gap:6px;">
+      <span style="font-size:11px;color:#666;font-weight:600;">진료이유:</span>
+      <span style="font-size:11px;color:#555;">1.우울</span><span style="font-size:11px;color:#555;">2.불면</span>
+      <span style="font-size:11px;color:#555;">3.불안</span><span style="font-size:11px;color:#555;">4.강박</span>
+      <span style="font-size:11px;color:#555;">5.트라우마</span><span style="font-size:11px;color:#555;">6.ADHD</span>
+      <span style="font-size:11px;color:#555;">7.틱</span><span style="font-size:11px;color:#555;">8.환청환시</span>
+    </div>
+    <div id="apptContainer" style="padding:10px 10px;"></div>
   </div>
 </div>
 
@@ -3691,6 +3730,211 @@ async function saveClinResult(){
 
   if(saveError){ toast('저장 실패: '+saveError.message); return; }
   toast('✅ '+scale.title+' 저장 완료! ('+ptNum+')');
+}
+
+// ══ 예약 탭 ══════════════════════════════════════════
+var APPT_TIMES_FULL = ['10:00','11:00','3:00','4:00'];
+var APPT_TIMES_SAT  = ['10:00','11:00'];
+var REASONS_MAP = {1:'우울',2:'불면',3:'불안',4:'강박',5:'트라우마',6:'ADHD',7:'틱',8:'환청환시'};
+var _apptData = {}, _apptDates2 = [];
+
+function toD6appt(d){return String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
+
+function getApptDates2(){
+  var dates=[], base=new Date();
+  for(var i=0;i<8;i++){var d=new Date(base);d.setDate(d.getDate()+i);dates.push(toD6appt(d));}
+  return dates;
+}
+
+function formatReason2(nums){
+  if(!nums) return '';
+  return String(nums).split('').filter(function(n){return REASONS_MAP[n];}).map(function(n){return n+'.'+REASONS_MAP[n];}).join(' ');
+}
+
+function escQ2(v){return (v||'').toString().replace(/"/g,'&quot;');}
+
+async function loadAppts(){
+  var btn=document.getElementById('apptLoadBtn');
+  if(btn){btn.disabled=true;btn.textContent='로딩중...';}
+  _apptDates2=getApptDates2();
+  try{
+    var inFilter=_apptDates2.join(',');
+    var r=await fetch(SUPA_URL+'/rest/v1/appointments?appt_date=in.('+inFilter+')&select=*&order=appt_date.asc,appt_time.asc&limit=1000',
+      {headers:{apikey:SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON}});
+    var rows=await r.json();
+    _apptData={};
+    _apptDates2.forEach(function(d){_apptData[d]=[];});
+    rows.forEach(function(row){if(_apptData[row.appt_date])_apptData[row.appt_date].push(row);});
+    renderApptTable2();
+  }catch(e){alert('예약 로딩 실패: '+e.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent='🔄 새로고침';}}
+}
+
+function renderApptTable2(){
+  var days=['일','월','화','수','목','금','토'];
+  var container=document.getElementById('apptContainer');
+  if(!container) return;
+  container.innerHTML='';
+  _apptDates2.forEach(function(d6){
+    var y=2000+parseInt(d6.slice(0,2)),mo=parseInt(d6.slice(2,4)),dd=parseInt(d6.slice(4,6));
+    var dow=new Date(y,mo-1,dd).getDay();
+    if(dow===0||dow===3) return; // 일/수 스킵
+    var isSat=dow===6, isToday=d6===toD6appt(new Date());
+    var times=isSat?APPT_TIMES_SAT:APPT_TIMES_FULL;
+    var block=document.createElement('div');
+    block.style.cssText='margin-bottom:16px;border:1px solid #e0e4ef;border-radius:10px;overflow:hidden;';
+    var header='<div style="background:#4f8ef7;padding:9px 14px;display:flex;align-items:center;gap:10px;">'
+      +'<span style="font-family:monospace;font-size:14px;font-weight:700;color:#fff;">'+d6+'</span>'
+      +'<span style="font-size:13px;font-weight:600;color:#fff;">('+days[dow]+')</span>'
+      +(isToday?'<span style="font-size:10px;background:rgba(255,255,255,0.3);color:#fff;padding:2px 6px;border-radius:4px;">오늘</span>':'')
+      +'</div>';
+    var td='padding:7px 8px;border-bottom:1px solid #f0f2f8;vertical-align:middle;';
+    var inp='background:transparent;border:none;border-bottom:1px solid #e0e4ef;padding:3px 4px;font-size:14px;outline:none;font-family:inherit;width:100%;';
+    var tableHtml='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:14px;">'
+      +'<thead><tr style="background:#f7f8fc;">'
+      +'<th style="padding:8px 8px;text-align:left;border-bottom:1px solid #e0e4ef;min-width:50px;font-size:12px;">시간</th>'
+      +'<th style="padding:8px 8px;text-align:left;border-bottom:1px solid #e0e4ef;min-width:75px;font-size:12px;">성함</th>'
+      +'<th style="padding:8px 8px;text-align:left;border-bottom:1px solid #e0e4ef;min-width:100px;font-size:12px;">전화</th>'
+      +'<th style="padding:8px 8px;text-align:center;border-bottom:1px solid #e0e4ef;width:38px;font-size:12px;">나이</th>'
+      +'<th style="padding:8px 8px;text-align:left;border-bottom:1px solid #e0e4ef;min-width:110px;font-size:12px;">진료이유</th>'
+      +'<th style="padding:8px 8px;text-align:left;border-bottom:1px solid #e0e4ef;min-width:100px;font-size:12px;">기타</th>'
+      +'<th style="padding:8px 8px;text-align:left;border-bottom:1px solid #e0e4ef;min-width:110px;font-size:12px;">비고</th>'
+      +'<th style="padding:8px 8px;border-bottom:1px solid #e0e4ef;width:80px;font-size:12px;"></th>'
+      +'</tr></thead><tbody>';
+    times.forEach(function(time){
+      var existing=(_apptData[d6]||[]).filter(function(r){return r.appt_time===time;});
+      if(existing.length===0){tableHtml+=renderApptRow2(d6,time,null);}
+      else{existing.forEach(function(r){tableHtml+=renderApptRow2(d6,time,r);});}
+      tableHtml+='<tr class="appt-add-row2" data-d6="'+d6+'" data-time="'+time+'">'
+        +'<td colspan="8" style="padding:2px 8px;border-bottom:1px solid #f0f2f8;">'
+        +'<button onclick="addApptRow2(this)" style="font-size:11px;padding:2px 10px;background:none;border:1px dashed #c7d9fb;border-radius:4px;color:#4f8ef7;cursor:pointer;">+ 행 추가</button>'
+        +'</td></tr>';
+    });
+    tableHtml+='</tbody></table></div>';
+    block.innerHTML=header+tableHtml;
+    container.appendChild(block);
+  });
+}
+
+function renderApptRow2(d6,time,data){
+  var id=data?data.id:0;
+  var hasFill=data&&(data.name||data.phone);
+  var bg=hasFill?'background:#dbeafe;':'';
+  var td='padding:7px 8px;border-bottom:1px solid #f0f2f8;vertical-align:middle;';
+  var inp='background:transparent;border:none;border-bottom:1px solid #e0e4ef;padding:3px 4px;font-size:14px;outline:none;font-family:inherit;';
+  var rn=data?String(data.reason||'').replace(/[^1-8]/g,''):'';
+  return '<tr style="'+bg+'" data-d6="'+d6+'" data-time="'+time+'" data-id="'+id+'">'
+    +'<td style="'+td+'font-weight:700;color:#444;font-size:14px;">'+time+'</td>'
+    +'<td style="'+td+'"><input style="'+inp+'width:72px;" value="'+escQ2(data?data.name||'':'')+'" placeholder="성함" class="appt-inp2" data-field="name" onblur="saveApptRow2(this)"></td>'
+    +'<td style="'+td+'"><input style="'+inp+'width:100px;" value="'+escQ2(data?data.phone||'':'')+'" placeholder="전화번호" class="appt-inp2" data-field="phone" onblur="saveApptRow2(this)"></td>'
+    +'<td style="'+td+';text-align:center;"><input style="'+inp+'width:34px;text-align:center;" value="'+escQ2(data?data.age||'':'')+'" placeholder="나이" class="appt-inp2" data-field="age" onblur="saveApptRow2(this)"></td>'
+    +'<td style="'+td+'">'
+    +'<input style="'+inp+'width:48px;" value="'+rn+'" placeholder="1 2 3" maxlength="10" class="appt-inp2 reason-inp2" data-field="reason" oninput="updateReason2Disp(this)" onblur="saveApptRow2(this)">'
+    +'<div class="reason-disp2" style="font-size:11px;color:#555;margin-top:2px;">'+formatReason2(rn)+'</div>'
+    +'</td>'
+    +'<td style="'+td+'"><input style="'+inp+'width:95px;" value="'+escQ2(data?data.note||'':'')+'" placeholder="기타" class="appt-inp2" data-field="note" onblur="saveApptRow2(this)"></td>'
+    +'<td style="'+td+'"><input style="'+inp+'width:105px;" value="'+escQ2(data?data.memo||'':'')+'" placeholder="비고" class="appt-inp2" data-field="memo" onblur="saveApptRow2(this)"></td>'
+    +'<td style="'+td+';white-space:nowrap;">'
+    +'<button onclick="saveApptRow2Btn(this)" style="font-size:11px;padding:3px 8px;background:#18a97a;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:3px;">저장</button>'
+    +(id?'<button onclick="deleteAppt2('+id+')" style="font-size:11px;padding:3px 7px;background:none;border:1px solid #fbb;color:#e53e3e;border-radius:4px;cursor:pointer;">삭제</button>':'')
+    +'<span class="appt-status2" style="font-size:10px;margin-left:2px;"></span>'
+    +'</td>'
+    +'</tr>';
+}
+
+function updateReason2Disp(input){
+  var td=input.parentElement;
+  var div=td?td.querySelector('.reason-disp2'):null;
+  if(div) div.textContent=formatReason2(input.value);
+}
+
+function addApptRow2(btn){
+  var tr=btn.closest('tr');
+  var d6=tr.dataset.d6,time=tr.dataset.time;
+  var tmp=document.createElement('tbody');
+  tmp.innerHTML=renderApptRow2(d6,time,null);
+  tr.parentNode.insertBefore(tmp.firstChild,tr);
+}
+
+async function saveApptRowData2(row){
+  if(!row) return;
+  var d6=row.dataset.d6,time=row.dataset.time,id=parseInt(row.dataset.id)||0;
+  var getVal=function(f){var el=row.querySelector('[data-field="'+f+'"]');return el?el.value.trim():'';};
+  var name=getVal('name'),phone=getVal('phone'),age=getVal('age'),reason=getVal('reason'),note=getVal('note'),memo=getVal('memo');
+  if(!id&&!name&&!phone&&!age&&!reason&&!note&&!memo) return;
+  var statusEl=row.querySelector('.appt-status2');
+  try{
+    if(id){
+      var r=await fetch(SUPA_URL+'/rest/v1/appointments?id=eq.'+id,{
+        method:'PATCH',headers:{apikey:SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON,'Content-Type':'application/json'},
+        body:JSON.stringify({name:name,phone:phone,age:age,reason:reason,note:note,memo:memo,updated_at:new Date().toISOString()})
+      });
+      if(statusEl){statusEl.textContent='✓';statusEl.style.color='#18a97a';setTimeout(function(){statusEl.textContent='';},2000);}
+    } else {
+      var r2=await fetch(SUPA_URL+'/rest/v1/appointments',{
+        method:'POST',headers:{apikey:SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON,'Content-Type':'application/json','Prefer':'return=representation'},
+        body:JSON.stringify({appt_date:d6,appt_time:time,name:name,phone:phone,age:age,reason:reason,note:note,memo:memo})
+      });
+      var newRow=await r2.json();
+      if(newRow&&newRow[0]){
+        row.dataset.id=newRow[0].id;
+        var delBtns=row.querySelectorAll('button');
+        if(delBtns.length>=1&&statusEl){statusEl.textContent='✓ 저장됨';statusEl.style.color='#18a97a';setTimeout(function(){statusEl.textContent='';loadAppts();},1500);}
+      }
+    }
+  }catch(e){if(statusEl){statusEl.textContent='✕';statusEl.style.color='#e53e3e';}}
+}
+
+async function saveApptRow2(input){
+  var row=input.closest('tr');
+  if(!row) return;
+  var id=parseInt(row.dataset.id)||0;
+  if(!id) return;
+  await saveApptRowData2(row);
+}
+
+async function saveApptRow2Btn(btn){
+  var row=btn.closest('tr');
+  await saveApptRowData2(row);
+}
+
+async function deleteAppt2(id){
+  if(!id||id==='0') return;
+  if(!confirm('이 예약을 삭제하시겠습니까?')) return;
+  try{
+    await fetch(SUPA_URL+'/rest/v1/appointments?id=eq.'+id,{
+      method:'DELETE',headers:{apikey:SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON}
+    });
+    loadAppts();
+  }catch(e){alert('삭제 실패: '+e.message);}
+}
+
+// ══ 비밀번호 인증 ══════════════════════════════════
+(function(){
+  // URL 파라미터 ?auth=1 이면 바로 통과
+  var params = new URLSearchParams(window.location.search);
+  if(params.get('auth')==='hanriver'){
+    sessionStorage.setItem('hw_auth','1');
+  }
+  // 세션에 인증된 경우 바로 통과
+  if(sessionStorage.getItem('hw_auth')==='1'){
+    var ov=document.getElementById('pw-overlay');
+    if(ov) ov.style.display='none';
+  }
+})();
+
+function checkPw(){
+  var inp=document.getElementById('pw-inp');
+  var err=document.getElementById('pw-err');
+  if(inp.value==='hanriver0325'){
+    sessionStorage.setItem('hw_auth','1');
+    document.getElementById('pw-overlay').style.display='none';
+    err.textContent='';
+  } else {
+    err.textContent='비밀번호가 틀렸습니다.';
+    inp.value='';
+    inp.focus();
+  }
 }
 
 </script>
