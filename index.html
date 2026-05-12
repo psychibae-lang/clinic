@@ -597,7 +597,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 
-<div id="pw-overlay">
+<script>
+// 즉시 실행 - 오버레이 표시 전에 인증 확인
+var _hwAuth = (function(){
+  var params = new URLSearchParams(window.location.search);
+  if(params.get('auth')==='hanriver'){
+    localStorage.setItem('hw_auth','1');
+    return true;
+  }
+  return localStorage.getItem('hw_auth')==='1';
+})();
+document.write(_hwAuth ? '' : '<style>#pw-overlay{display:flex!important;}</style>');
+</script>
+<div id="pw-overlay" style="display:none;">
   <div id="pw-box">
     <h2>🔒 한강의원</h2>
     <p>접수 시스템에 접근하려면<br>비밀번호를 입력하세요</p>
@@ -3909,25 +3921,13 @@ async function deleteAppt2(id){
   }catch(e){alert('삭제 실패: '+e.message);}
 }
 
-// ══ 비밀번호 인증 ══════════════════════════════════
-(function(){
-  // URL 파라미터 ?auth=1 이면 바로 통과
-  var params = new URLSearchParams(window.location.search);
-  if(params.get('auth')==='hanriver'){
-    sessionStorage.setItem('hw_auth','1');
-  }
-  // 세션에 인증된 경우 바로 통과
-  if(sessionStorage.getItem('hw_auth')==='1'){
-    var ov=document.getElementById('pw-overlay');
-    if(ov) ov.style.display='none';
-  }
-})();
+// 비밀번호 인증 - 상단 인라인 스크립트에서 처리됨
 
 function checkPw(){
   var inp=document.getElementById('pw-inp');
   var err=document.getElementById('pw-err');
   if(inp.value==='hanriver0325'){
-    sessionStorage.setItem('hw_auth','1');
+    localStorage.setItem('hw_auth','1');
     document.getElementById('pw-overlay').style.display='none';
     err.textContent='';
   } else {
