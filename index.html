@@ -11,7 +11,7 @@
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f7f5;color:#1a1a1a;min-height:100vh;font-size:21px;font-weight:700}
 .app{max-width:864px;margin:0 auto;background:#fff;min-height:100vh;box-shadow:0 0 0 1px rgba(0,0,0,0.07)}
 .screen{display:none}.screen.active{display:block}
-.hdr{background:#22c55e;color:#fff;text-align:center;padding:14px;font-size:16px;font-weight:700}
+.hdr{font-weight:700;background:#22c55e;color:#fff;text-align:center;padding:14px;font-size:16px;font-weight:700}
 .sub-hdr{background:#a3e635;color:#fff;display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;font-size:18px;font-weight:700}
 .sub-hdr span{padding:9px;cursor:pointer}.sub-hdr span.act{background:#16a34a}
 .tab-content{display:none}.tab-content.act{display:block}
@@ -19,20 +19,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:1rem}
 .cat-btn{background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.15s}
 .cat-btn:hover{border-color:#bbb}.cat-btn.act{border-color:#2563eb;background:#eff6ff}
-.cat-name{font-size:17px;font-weight:700;margin-bottom:4px}.cat-scales{font-size:14px;font-weight:700;color:#888;line-height:1.5}
+.cat-name{font-size:13px;font-weight:700;margin-bottom:4px}.cat-scales{font-size:10px;color:#888;line-height:1.5}
 .cat-btn.act .cat-name{color:#2563eb}
 .sel-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:1rem;min-height:44px}
 .sel-lbl{font-size:11px;color:#0284c7;font-weight:600;margin-bottom:6px}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
-.chip{background:#fff;border:1px solid #bae6fd;border-radius:20px;padding:3px 10px;font-size:15px;font-weight:700;color:#0369a1;display:flex;align-items:center;gap:5px}
+.chip{background:#fff;border:1px solid #bae6fd;border-radius:20px;padding:3px 10px;font-size:11px;color:#0369a1;display:flex;align-items:center;gap:5px}
 .chip .rm{cursor:pointer;color:#94a3b8;font-size:13px}.chip .rm:hover{color:#ef4444}
 .scale-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:1rem}
 .sc-card{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:9px 10px;cursor:pointer;transition:all 0.12s}
 .sc-card:hover{border-color:#bbb}.sc-card.sel{border:1.5px solid #2563eb;background:#eff6ff}
-.sc-tag{display:inline-block;font-size:13px;padding:2px 7px;border-radius:4px;font-weight:700;margin-bottom:3px}
+.sc-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:4px;font-weight:600;margin-bottom:3px}
 .tag-dep{background:#dbeafe;color:#1d4ed8}.tag-anx{background:#d1fae5;color:#065f46}
 .tag-ocd{background:#ede9fe;color:#5b21b6}.tag-ptsd{background:#fef3c7;color:#92400e}.tag-other{background:#f3f4f6;color:#374151}
-.sc-name{font-size:16px;font-weight:700}.sc-sub{font-size:13px;font-weight:600;color:#aaa;margin-top:1px}
+.sc-name{font-size:12px;font-weight:700}.sc-sub{font-size:9px;color:#aaa;margin-top:1px}
 .name-section{padding:0 1.25rem 1rem}
 .name-row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
 .inp{padding:10px 13px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;transition:border 0.15s}
@@ -51,7 +51,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sort-btn.act{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
 .status-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:8px}
 .status-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.status-name{font-size:17px;font-weight:700}.status-date{font-size:15px;color:#aaa;font-weight:600}
+.status-name{font-size:13px;font-weight:600}.status-date{font-size:11px;color:#aaa}
 .badge{font-size:10px;padding:2px 8px;border-radius:10px}.b-done{background:#d1fae5;color:#065f46}.b-wait{background:#fef3c7;color:#92400e}
 .scale-tags{display:flex;flex-wrap:wrap;gap:4px}
 .q-hdr{background:#fff;border-bottom:1px solid #ebebeb;padding:12px 1.25rem;position:sticky;top:0;z-index:10}
@@ -226,8 +226,63 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .main {
     flex: 1;
     padding: 16px 20px;
-    max-width: 860px;
+    max-width: 700px;
+    min-width: 0;
   }
+
+  /* ─── 우측 과거 기록 패널 ─── */
+  .hist-panel {
+    width: 240px; flex-shrink: 0; background: var(--surface);
+    border-left: 1px solid var(--border); padding: 12px 10px;
+    position: sticky; top: 60px; height: calc(100vh - 60px);
+    overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  }
+  .hist-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--text3); font-weight: 600; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .hist-refresh-btn {
+    font-size: 10px; padding: 2px 8px; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--surface2); color: var(--text2);
+    cursor: pointer; font-family: inherit;
+  }
+  .hist-refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hist-filter { display: flex; gap: 5px; flex-shrink: 0; }
+  .hist-filter input {
+    flex: 1; padding: 6px 8px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--surface2); color: var(--text);
+    font-size: 11px; outline: none; min-width: 0;
+  }
+  .hist-filter input:focus { border-color: var(--accent); }
+  .hist-filter select {
+    padding: 5px 4px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface2); color: var(--text2); font-size: 10px; outline: none; cursor: pointer;
+  }
+  .hist-list { flex: 1; overflow-y: auto; }
+  .hist-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 10px; margin-bottom: 7px;
+  }
+  .hist-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+  .hist-scale-badge {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    background: rgba(79,142,247,0.12); padding: 1px 6px; border-radius: 4px;
+  }
+  .hist-time { font-size: 9px; color: var(--text3); }
+  .hist-score { font-size: 18px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .hist-interp { font-size: 10px; color: var(--text2); margin-left: 5px; }
+  .hist-name { font-size: 10px; color: var(--text3); margin: 2px 0 5px; }
+  .hist-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+  .hist-btn {
+    padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text2); font-family: inherit; transition: all 0.12s;
+  }
+  .hist-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hist-btn.load { background: rgba(79,142,247,0.1); border-color: var(--accent); color: var(--accent); }
+  .hist-empty { text-align: center; padding: 2rem 0; font-size: 11px; color: var(--text3); line-height: 1.8; }
 
   /* ─── Scale panel ─── */
   .scale-panel { display: none; }
@@ -497,7 +552,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     html, body { background: #fff !important; }
 
-    .sidebar, header, .patient-bar, .score-actions, .toast { display: none !important; }
+    .sidebar, header, .patient-bar, .score-actions, .toast, .hist-panel { display: none !important; }
     .print-info { display: flex !important; justify-content: space-between; font-size: 11px; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 8px; }
 
     .layout { display: block !important; }
@@ -589,13 +644,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <div class="screen active" id="s-admin">
   <div class="hdr">정신건강 검사 관리 (일반용)</div>
-  <div class="sub-hdr" style="grid-template-columns:1fr">
+  <div class="sub-hdr" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr">
     <span class="act" onclick="switchSubTab('issue',this)">검사 선택</span>
-    <span onclick="switchSubTab('status',this)" style="display:none">완료 현황</span>
-    <span onclick="switchSubTab('daeri',this)" style="display:none">대리 처방</span>
-    <span onclick="switchSubTab('chojin',this)" style="display:none">초진 접수</span>
-    <span onclick="switchSubTab('search',this)" style="display:none">접수 조회</span>
-    <span onclick="switchSubTab('clin',this)" style="display:none">임상가 척도</span>
+    <span onclick="switchSubTab('status',this)">완료 현황</span>
+    <span onclick="switchSubTab('daeri',this)">대리 처방</span>
+    <span onclick="switchSubTab('chojin',this)">초진 접수</span>
+    <span onclick="switchSubTab('search',this)">접수 조회</span>
+    <span onclick="switchSubTab('clin',this)">임상가 척도</span>
   </div>
   <div class="tab-content act" id="tab-issue" style="font-weight:700;font-size:calc(1em + 4px)">
     <div class="cat-section">
@@ -611,7 +666,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             ✕ 전체 해제
           </button>
         </div>
-        <div class="chips" id="chips"><span style="font-size:11px;color:#94a3b8">검사지를 선택해 주세요</span></div>
+        <div class="chips" id="chips"><span style="font-size:15px;font-weight:700;color:#94a3b8">검사지를 선택해 주세요</span></div>
       </div>
     </div>
     <div class="name-section">
@@ -1014,7 +1069,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div id="clin-body" style="display:block">
       <div style="padding:8px 1rem;background:#f9f9f7;border-bottom:1px solid #eee;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <div><label style="font-size:12px;color:#888;margin-right:6px">환자번호</label>
-          <input type="text" id="ptNum" placeholder="45678" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:90px"></div>
+          <input type="text" id="ptNum" placeholder="45678" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:90px" oninput="scheduleHistLoad()"></div>
         <div><label style="font-size:12px;color:#888;margin-right:6px">검사날짜</label>
           <input type="text" id="ptDate" placeholder="260428" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:80px"></div>
         <button onclick="saveClinResult()" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">💾 저장</button>
@@ -1058,6 +1113,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <span id="printInfoRight"></span>
     </div>
   </main>
+
+  <!-- 우측 과거 기록 패널 -->
+  <aside class="hist-panel" id="histPanel">
+    <div class="hist-title">
+      <span>📋 최근 임상가 척도 기록</span>
+      <button class="hist-refresh-btn" onclick="loadHistResults()">새로고침</button>
+    </div>
+    <div class="hist-filter">
+      <input id="hist-search" placeholder="이름/척도 검색" oninput="filterHistResults()" />
+      <select id="hist-period" onchange="loadHistResults()">
+        <option value="7">7일</option>
+        <option value="30" selected>30일</option>
+        <option value="90">3개월</option>
+        <option value="0">전체</option>
+      </select>
+    </div>
+    <div class="hist-list" id="hist-list">
+      <div class="hist-empty">환자번호 입력 후<br>저장하면 기록이<br>표시됩니다</div>
+    </div>
+  </aside>
 </div>
     </div>
   </div>
@@ -1271,7 +1346,7 @@ function switchSubTab(tab,el){
   if(tab==='daeri'){setTimeout(()=>{dr2InitCanvas();},200);}
   if(tab==='chojin'){setTimeout(()=>{cj2InitCanvas();},200);}
   if(tab==='search'){loadSearchTab();}
-  if(tab==='clin'){document.getElementById('clin-lock').style.display='none';document.getElementById('clin-body').style.display='block';const _t=new Date();const _ptDate=document.getElementById('ptDate');if(_ptDate&&!_ptDate.value){_ptDate.value=String(_t.getFullYear()).slice(2)+String(_t.getMonth()+1).padStart(2,'0')+String(_t.getDate()).padStart(2,'0');}}
+  if(tab==='clin'){document.getElementById('clin-lock').style.display='none';document.getElementById('clin-body').style.display='block';if(!clinUnlocked){clinUnlocked=true;showPanel('hamd');}loadHistResults();const _today=new Date();const _yy=String(_today.getFullYear()).slice(2);const _mm=String(_today.getMonth()+1).padStart(2,'0');const _dd=String(_today.getDate()).padStart(2,'0');const _ptDate=document.getElementById('ptDate');if(_ptDate&&!_ptDate.value){_ptDate.value=_yy+_mm+_dd;}}
 }
 
 function renderCatGrid(){
@@ -1310,7 +1385,7 @@ function renderChips(){
   const c=document.getElementById('chips');
   const clearBtn=document.getElementById('clear-all-btn');
   if(selScales.size===0){
-    c.innerHTML='<span style="font-size:11px;color:#94a3b8">검사지를 선택해 주세요</span>';
+    c.innerHTML='<span style="font-size:15px;font-weight:700;color:#94a3b8">검사지를 선택해 주세요</span>';
     if(clearBtn) clearBtn.style.display='none';
     return;
   }
@@ -1575,8 +1650,63 @@ function renderQ(){
   .main {
     flex: 1;
     padding: 16px 20px;
-    max-width: 860px;
+    max-width: 700px;
+    min-width: 0;
   }
+
+  /* ─── 우측 과거 기록 패널 ─── */
+  .hist-panel {
+    width: 240px; flex-shrink: 0; background: var(--surface);
+    border-left: 1px solid var(--border); padding: 12px 10px;
+    position: sticky; top: 60px; height: calc(100vh - 60px);
+    overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  }
+  .hist-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--text3); font-weight: 600; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .hist-refresh-btn {
+    font-size: 10px; padding: 2px 8px; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--surface2); color: var(--text2);
+    cursor: pointer; font-family: inherit;
+  }
+  .hist-refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hist-filter { display: flex; gap: 5px; flex-shrink: 0; }
+  .hist-filter input {
+    flex: 1; padding: 6px 8px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--surface2); color: var(--text);
+    font-size: 11px; outline: none; min-width: 0;
+  }
+  .hist-filter input:focus { border-color: var(--accent); }
+  .hist-filter select {
+    padding: 5px 4px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface2); color: var(--text2); font-size: 10px; outline: none; cursor: pointer;
+  }
+  .hist-list { flex: 1; overflow-y: auto; }
+  .hist-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 10px; margin-bottom: 7px;
+  }
+  .hist-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+  .hist-scale-badge {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    background: rgba(79,142,247,0.12); padding: 1px 6px; border-radius: 4px;
+  }
+  .hist-time { font-size: 9px; color: var(--text3); }
+  .hist-score { font-size: 18px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .hist-interp { font-size: 10px; color: var(--text2); margin-left: 5px; }
+  .hist-name { font-size: 10px; color: var(--text3); margin: 2px 0 5px; }
+  .hist-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+  .hist-btn {
+    padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text2); font-family: inherit; transition: all 0.12s;
+  }
+  .hist-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .hist-btn.load { background: rgba(79,142,247,0.1); border-color: var(--accent); color: var(--accent); }
+  .hist-empty { text-align: center; padding: 2rem 0; font-size: 11px; color: var(--text3); line-height: 1.8; }
 
   /* ─── Scale panel ─── */
   .scale-panel { display: none; }
@@ -1848,7 +1978,7 @@ function renderQ(){
 
     html, body { background: #fff !important; }
 
-    .sidebar, header, .patient-bar, .score-actions, .toast { display: none !important; }
+    .sidebar, header, .patient-bar, .score-actions, .toast, .hist-panel { display: none !important; }
     .print-info { display: flex !important; justify-content: space-between; font-size: 11px; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 8px; }
 
     .layout { display: block !important; }
@@ -2985,13 +3115,13 @@ body { font-family: 'Noto Sans KR', sans-serif; background: #fff; color: #1a1f36
   <span>${filename}</span>
 </div>
 ${clone.outerHTML}
-<script>
+'<scr'+'ipt>'
   window.onload = function() {
     window.focus();
     window.print();
     setTimeout(function(){ window.close(); }, 1200);
   };
-<\/script>
+'</scr'+'ipt>'
 </body>
 </html>`;
 
@@ -3430,12 +3560,13 @@ async function openDetail(id, table) {
     const idStr = (row.id1||'') + ' - ' + (row.id2||'');
     const idRaw = (row.id1||'') + (row.id2||'');           // 13자리 연속
     const phoneRaw = (row.phone||'').replace(/^010[-\s]?/, '').replace(/[-\s]/g,''); // 010 제외
+    const phoneFull = (row.phone||'').replace(/[-\s]/g,''); // 010 포함 전체
     html = `<table style="width:100%;border-collapse:collapse;font-size:16px;font-weight:700;">
       ${tr('접수일시', dt)}
       ${tr('차트번호', row.chart)}
       ${trCopy('성명', row.name||'')}
       ${trCopy('주민번호', idStr, idRaw)}
-      ${trCopy('전화번호', row.phone||'', phoneRaw)}
+      ${trCopyPhone('전화번호', row.phone||'', phoneRaw, phoneFull)}
       ${trCopy('주소', row.addr||'')}
       ${tr('개인정보 동의(6)', row.agree1?'✅':'❌')}
       ${tr('진단서 발급 동의(7)', row.agree2?'✅':'❌')}
@@ -3471,11 +3602,30 @@ function tr(label, val) {
     <td style="padding:7px 4px;font-weight:700;">${val||'-'}</td></tr>`;
 }
 
+function trCopyPhone(label, val, copyShort, copyFull) {
+  const safeShort = (copyShort||'').replace(/'/g,"\\'");
+  const safeFull  = (copyFull||'').replace(/'/g,"\\'");
+  return `<tr style="border-bottom:1px solid #f3f4f6;">
+    <td style="padding:7px 4px;color:#6b7280;width:120px;vertical-align:middle;">${label}</td>
+    <td style="padding:5px 4px;font-weight:500;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="flex:1;">${val||'-'}</span>
+        <button onclick="copyCell('${safeShort}',this)"
+          style="flex-shrink:0;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;white-space:nowrap;">
+          📋 010제외
+        </button>
+        <button onclick="copyCell('${safeFull}',this)"
+          style="flex-shrink:0;background:#f0fff4;border:1px solid #86efac;color:#15803d;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;white-space:nowrap;">
+          📋 전체번호
+        </button>
+      </div>
+    </td></tr>`;
+}
+
 function trCopy(label, val, copyVal) {
   const textToCopy = (copyVal !== undefined ? copyVal : val) || '-';
   const safe = textToCopy.replace(/'/g,"\\'");
   const hint = label==='주민번호' ? '<span style="font-size:10px;color:#9ca3af;margin-left:4px;">(13자리)</span>'
-             : label==='전화번호' ? '<span style="font-size:10px;color:#9ca3af;margin-left:4px;">(010제외)</span>'
              : '';
   return `<tr style="border-bottom:1px solid #f3f4f6;">
     <td style="padding:7px 4px;color:#6b7280;width:120px;vertical-align:middle;">${label}</td>
@@ -3513,15 +3663,37 @@ function printModalPDF() {
   const name = table === 'chojin' ? (row.name||'') : (row.visitor_name||'');
   const dt = new Date(row.created_at).toLocaleString('ko-KR');
   const content = document.getElementById('modal-body').innerHTML;
+
+  // ── 파일명 자동 생성: 차트번호 + 신환동의서 + 날짜(YYMMDD) ──
+  const chart = (row.chart || '').trim();
+  const dateObj = new Date(row.created_at);
+  const yy = String(dateObj.getFullYear()).slice(2);
+  const mm = String(dateObj.getMonth()+1).padStart(2,'0');
+  const dd = String(dateObj.getDate()).padStart(2,'0');
+  const dateStr = yy + mm + dd;
+  const pdfFilename = table === 'chojin'
+    ? `${chart}신환동의서${dateStr}`
+    : `${chart}대리처방${dateStr}`;
+
   const w = window.open('','_blank');
   if (!w) { toast('팝업 차단을 해제해주세요.'); return; }
-  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${name} 접수내역</title>
+  w.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${pdfFilename}</title>
   <style>body{font-family:'Noto Sans KR',sans-serif;padding:20px;font-size:13px}table{width:100%;border-collapse:collapse}td{padding:8px 6px;border-bottom:1px solid #eee}@media print{button{display:none}}</style>
+  <script>
+    // 인쇄 다이얼로그 열릴 때 파일명 자동 적용
+    window.onbeforeprint = function(){ document.title = '${pdfFilename}'; };
+    window.onafterprint  = function(){ document.title = '${pdfFilename}'; };
+  <\/script>
   </head><body><h3 style="margin-bottom:14px;">${table==='chojin'?'초진 접수':'대리 처방'} — ${name} (${dt})</h3>
   ${content}
-  <button onclick="window.print()" style="margin-top:20px;padding:10px 24px;background:#1a3a5c;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;">🖨️ 인쇄 / PDF 저장</button>
+  <div style="margin-top:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <button onclick="document.title='${pdfFilename}';window.print();" style="padding:10px 24px;background:#1a3a5c;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;">🖨️ 인쇄 / PDF 저장</button>
+    <span style="font-size:12px;color:#555;">💾 저장 파일명: <strong>${pdfFilename}.pdf</strong></span>
+  </div>
   </body></html>`);
   w.document.close();
+  // 팝업 document.title 도 즉시 지정
+  setTimeout(() => { try { w.document.title = pdfFilename; } catch(_){} }, 300);
 }
 
 function openEditModal() {
@@ -3605,6 +3777,103 @@ function clinLogin(){
     ptDate.value = String(now.getFullYear()).slice(2)+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
   }
   showPanel('hamd');
+}
+
+// ═══════════════════════════════════════════════════
+// 우측 과거 기록 패널
+// ═══════════════════════════════════════════════════
+let histCache = [];
+let histTimer = null;
+
+function scheduleHistLoad(){
+  clearTimeout(histTimer);
+  histTimer = setTimeout(loadHistResults, 700);
+}
+
+async function loadHistResults(){
+  const listEl = document.getElementById('hist-list');
+  if(!listEl) return;
+  const ptNum = (document.getElementById('ptNum')?.value||'').trim();
+  const period = parseInt(document.getElementById('hist-period')?.value||'30');
+  const clinIds = Object.keys(CLIN_SCALES);
+  listEl.innerHTML = '<div class="hist-empty">불러오는 중...</div>';
+  let q = sb.from('results').select('*').in('scale_id', clinIds)
+    .order('completed_at', {ascending:false}).limit(200);
+  if(ptNum){
+    q = q.ilike('patient_name', '%'+ptNum+'%');
+  } else if(period > 0){
+    q = q.gte('completed_at', new Date(Date.now()-period*86400000).toISOString());
+  }
+  const {data} = await q;
+  histCache = data||[];
+  renderHistList(histCache);
+}
+
+function filterHistResults(){
+  const kw = (document.getElementById('hist-search')?.value||'').toLowerCase();
+  renderHistList(!kw ? histCache : histCache.filter(r=>
+    (r.patient_name||'').toLowerCase().includes(kw)||
+    (r.scale_id||'').toLowerCase().includes(kw)||
+    (r.interp||'').toLowerCase().includes(kw)
+  ));
+}
+
+function _p2(n){ return String(n).padStart(2,'0'); }
+
+function renderHistList(data){
+  const listEl = document.getElementById('hist-list');
+  if(!listEl) return;
+  if(!data||!data.length){ listEl.innerHTML='<div class="hist-empty">기록 없음</div>'; return; }
+  listEl.innerHTML = data.map(r=>{
+    const sc = CLIN_SCALES[r.scale_id];
+    const dt = new Date(r.completed_at||r.created_at||'');
+    const ts = isNaN(dt)?'' : `${String(dt.getFullYear()).slice(2)}${_p2(dt.getMonth()+1)}${_p2(dt.getDate())} ${_p2(dt.getHours())}:${_p2(dt.getMinutes())}`;
+    const cp = (r.copy_text||'').replace(/'/g,"&#39;");
+    return `<div class="hist-card">
+      <div class="hist-card-top">
+        <span class="hist-scale-badge">${sc?.name||r.scale_id}</span>
+        <span class="hist-time">${ts}</span>
+      </div>
+      <div style="display:flex;align-items:baseline">
+        <span class="hist-score">${r.score}</span>
+        <span class="hist-interp">${r.interp||''}</span>
+      </div>
+      <div class="hist-name">${r.patient_name||''}</div>
+      <div class="hist-actions">
+        <button class="hist-btn load" onclick="histLoad('${r.session_id}','${r.scale_id}')">불러오기</button>
+        ${r.copy_text?`<button class="hist-btn" onclick="navigator.clipboard.writeText('${cp}').then(()=>showToast('복사 완료'))">복사</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function histLoad(sessId, scaleId){
+  const {data:res} = await sb.from('results').select('*').eq('session_id',sessId).eq('scale_id',scaleId).maybeSingle();
+  if(!res){ showToast('데이터를 찾을 수 없습니다.'); return; }
+  const ptNumEl = document.getElementById('ptNum');
+  const ptDateEl = document.getElementById('ptDate');
+  if(ptNumEl && res.patient_name) ptNumEl.value = res.patient_name;
+  if(ptDateEl && res.completed_at){
+    const dt = new Date(res.completed_at);
+    if(!isNaN(dt)) ptDateEl.value = String(dt.getFullYear()).slice(2)+_p2(dt.getMonth()+1)+_p2(dt.getDate());
+  }
+  showPanel(scaleId);
+  const ans = res.answers||[];
+  try {
+    if(scaleId==='mmse'){
+      ans.slice(0,30).forEach((v,i)=>{ if(v!=null){ mmseScores[i]=v; mmseSet(i,v); } });
+      if(ans[30]!=null) gdsSet(ans[30]);
+    } else if(scaleId==='psqi'){
+      const keys=['q1','q2','q3','q4','q5a','q5b','q5c','q5d','q5e','q5f','q5g','q5h','q5i','q5j','q6','q7','q8','q9','q10'];
+      keys.forEach((k,i)=>{ if(ans[i]!=null) psqiInputs[k]=ans[i]; });
+      renderPanel('psqi');
+    } else if(scaleId==='bprs'){
+      ans.forEach((v,i)=>{ if(v!=null) bprsSelect(i,v); });
+    } else {
+      ans.forEach((v,i)=>{ if(v!=null) selectScore(scaleId,i,v); });
+    }
+  } catch(e){ console.error('불러오기 오류:',e); }
+  showToast('✅ '+(CLIN_SCALES[scaleId]?.title||scaleId)+' 불러오기 완료');
 }
 
 async function saveClinResult(){
@@ -3691,6 +3960,7 @@ async function saveClinResult(){
 
   if(saveError){ toast('저장 실패: '+saveError.message); return; }
   toast('✅ '+scale.title+' 저장 완료! ('+ptNum+')');
+  loadHistResults();
 }
 
 </script>
